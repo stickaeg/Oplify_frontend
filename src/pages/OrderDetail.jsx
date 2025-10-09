@@ -120,12 +120,12 @@ const OrderDetail = () => {
                     Batches:
                   </p>
                   <div className="space-y-2">
-                    {item.batches.map((b) => (
+                    {item.BatchItem.map((b) => (
                       <div
                         key={b.batchId}
                         className="flex items-center justify-between text-sm"
                       >
-                        <span className="font-semibold">{b.batchName}</span>
+                        <span className="font-semibold">{b.batch.name}</span>
                         <span
                           className={`px-3 py-1 rounded-full text-white text-xs font-semibold ${
                             statusColors[b.status] || "bg-gray-400"
