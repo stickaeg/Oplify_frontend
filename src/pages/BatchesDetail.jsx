@@ -239,7 +239,7 @@ const BatchesDetail = () => {
 
       {batch.qrCodeUrl && (
         <div className="mt-6 flex justify-center gap-4">
-          {user?.role === "PRINTER" && batch.status === "DESIGNED" && (
+          {user?.role === "PRINTER" && batch.status === "PRINTING" && (
             <a
               href="/scan/printer"
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition"
