@@ -181,69 +181,6 @@ const BatchesDetail = () => {
               </div>
             </div>
           )}
-
-          {/* Item QRs */}
-          {batch.items?.length ? (
-            <div>
-              <h3 className="font-semibold mb-4 text-gray-800 text-lg flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-indigo-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-                Individual Item QR Codes
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-                {batch.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white border-2 border-indigo-100 rounded-xl p-4 text-center shadow-md hover:shadow-xl hover:scale-105 hover:border-indigo-300 transition-all duration-200"
-                  >
-                    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-2 mb-2">
-                      {item.qrCodeUrl ? (
-                        <img
-                          src={item.qrCodeUrl}
-                          alt="Item QR"
-                          className="mx-auto w-32 h-32 rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-32 h-32 mx-auto flex items-center justify-center bg-gray-100 rounded-lg">
-                          <p className="text-gray-400 text-xs">No QR</p>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 min-h-[2rem]">
-                      {item.productTitle}
-                    </p>
-                    <p className="text-xs text-indigo-600 font-medium mt-1">
-                      {item.sku}
-                    </p>
-                    {item.qrCodeUrl && (
-                      <a
-                        href={item.qrCodeUrl}
-                        download={`${item.productTitle}-QR.png`}
-                        className="mt-2 inline-block px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition"
-                      >
-                        Download
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center">
-              No items to display QR codes for.
-            </p>
-          )}
         </div>
       )}
 
@@ -398,31 +335,83 @@ const BatchesDetail = () => {
         )}
       </div>
 
-      {/* ===== Batch Items ===== */}
+      {/* ===== Batch Items & Units ===== */}
       <div className="bg-white shadow rounded p-6">
-        <h2 className="text-xl font-semibold mb-4">Batch Items</h2>
+        <h2 className="text-xl font-semibold mb-4">Batch Items & Units</h2>
+
         {batch.items?.length ? (
-          <div className="space-y-4">
+          <div className="space-y-8">
             {batch.items.map((item) => (
               <div
                 key={item.id}
-                className="border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center"
+                className="border border-gray-200 rounded-lg p-5 shadow-sm"
               >
-                <div>
-                  <p className="font-semibold">{item.productTitle}</p>
-                  <p className="text-sm text-gray-500">
-                    SKU: {item.sku || "—"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Store: {item.storeName}
-                  </p>
+                {/* 🧱 Item Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                  <div>
+                    <p className="font-semibold text-lg text-gray-800">
+                      {item.units?.[0]?.productTitle || "Unknown Product"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Store: {item.units?.[0]?.storeName || "—"}
+                    </p>
+                  </div>
+                  <div className="text-sm text-gray-600 mt-2 sm:mt-0">
+                    <p>Order: #{item.units?.[0]?.orderNumber || "—"}</p>
+                    <p>Units: {item.totalUnits}</p>
+                  </div>
                 </div>
-                <div className="text-sm mt-2 sm:mt-0 text-right">
-                  <p>Qty: {item.quantityInBatch}</p>
-                  <p className="text-gray-600">
-                    Order : #{item.orderNumber || "—"}
+
+                {/* 🧩 Unit Grid */}
+                {item.units?.length ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {item.units.map((unit) => (
+                      <div
+                        key={unit.id}
+                        className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg shadow hover:shadow-md transition"
+                      >
+                        <div className="bg-white p-2 rounded-lg border border-gray-200 mb-2 flex items-center justify-center">
+                          {unit.qrCodeUrl ? (
+                            <img
+                              src={unit.qrCodeUrl}
+                              alt="QR"
+                              className="w-24 h-24 object-contain"
+                            />
+                          ) : (
+                            <p className="text-xs text-gray-400">No QR</p>
+                          )}
+                        </div>
+
+                        <p className="text-xs font-semibold text-gray-800 line-clamp-2">
+                          {unit.productTitle}
+                        </p>
+                        <p className="text-xs text-gray-500">{unit.sku}</p>
+
+                        <p
+                          className={`text-[10px] mt-1 px-2 py-1 rounded-full text-white inline-block ${
+                            statusColors[unit.status] || "bg-gray-400"
+                          }`}
+                        >
+                          {unit.status}
+                        </p>
+
+                        {unit.qrCodeUrl && (
+                          <a
+                            href={unit.qrCodeUrl}
+                            download={`${unit.productTitle}-QR.png`}
+                            className="block mt-2 text-center text-xs text-blue-600 font-medium hover:underline"
+                          >
+                            Download
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">
+                    No units found for this item.
                   </p>
-                </div>
+                )}
               </div>
             ))}
           </div>
