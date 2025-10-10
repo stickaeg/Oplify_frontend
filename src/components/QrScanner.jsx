@@ -63,11 +63,6 @@ export default function QRScanner() {
         setScanning(true);
         return;
       }
-      if (type === "item" && user?.role !== "CUTTER") {
-        setError("Only CUTTER users can scan items.");
-        setScanning(true);
-        return;
-      }
 
       // ✅ Call correct mutation
       if (type === "batch") batchMutation.mutate(token);
@@ -94,7 +89,7 @@ export default function QRScanner() {
         </p>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">  
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
