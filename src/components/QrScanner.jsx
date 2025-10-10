@@ -3,7 +3,7 @@ import { Scanner } from "@yudiel/react-qr-scanner";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { scanBatch, scanItemCutter } from "../api/agentsApi"; // adjust import path
+import { scanBatch, scanItemCutter } from "../api/agentsApi";
 
 export default function QRScanner() {
   const [scanning, setScanning] = useState(true);
@@ -12,34 +12,40 @@ export default function QRScanner() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Define React Query mutations
+  // ✅ Handle success & error display
+  const handleSuccess = (data) => {
+    setMessage(data.message || "✅ Scan successful");
+    setError(null);
+    console.log("Scan Result:", data);
+  };
+
+  const handleFailure = (err) => {
+    console.error("Scan failed:", err);
+    const msg =
+      err?.response?.data?.error ||
+      err?.message ||
+      "Something went wrong while scanning";
+    setError(msg);
+    setMessage(null);
+  };
+
+  // ✅ React Query: Batch Mutation
   const batchMutation = useMutation({
     mutationFn: scanBatch,
-    onSuccess: (data) => {
-      setMessage(`✅ ${data.message || "Batch scanned successfully"}`);
-      console.log("Batch Scan Result:", data);
-    },
-    onError: (err) => {
-      console.error(err);
-      setError(err.response?.data?.error || "Failed to scan batch");
-    },
+    onSuccess: handleSuccess,
+    onError: handleFailure,
     onSettled: () => setScanning(true),
   });
 
+  // ✅ React Query: Item/Unit Mutation
   const itemMutation = useMutation({
     mutationFn: scanItemCutter,
-    onSuccess: (data) => {
-      setMessage(`✅ ${data.message || "Item scanned successfully"}`);
-      console.log("Item Scan Result:", data);
-    },
-    onError: (err) => {
-      console.error(err);
-      setError(err.response?.data?.error || "Failed to scan item");
-    },
+    onSuccess: handleSuccess,
+    onError: handleFailure,
     onSettled: () => setScanning(true),
   });
 
-  // 🧠 Handle scanned result
+  // 🧠 Handle QR scan result
   const handleScan = async (result) => {
     if (!scanning || !result?.[0]?.rawValue) return;
 
@@ -49,34 +55,39 @@ export default function QRScanner() {
 
     try {
       const scannedUrl = result[0].rawValue;
-      console.log("Scanned QR:", scannedUrl);
+      console.log("📦 Scanned QR:", scannedUrl);
 
-      // Extract token and type from URL
       const url = new URL(scannedUrl);
       const parts = url.pathname.split("/");
-      const type = parts.includes("batch") ? "batch" : "item";
       const token = parts.pop();
+      const type = parts.includes("batch") ? "batch" : "item";
 
-      // 🧩 Check role before calling API
+      // 🧩 Role-based logic
       if (type === "batch" && user?.role !== "PRINTER") {
         setError("Only PRINTER users can scan batches.");
         setScanning(true);
         return;
       }
 
-      // ✅ Call correct mutation
+      if (type === "item" && !["PRINTER", "CUTTER"].includes(user?.role)) {
+        setError("Only PRINTER or CUTTER users can scan items.");
+        setScanning(true);
+        return;
+      }
+
+      // ✅ Call appropriate API
       if (type === "batch") batchMutation.mutate(token);
       else itemMutation.mutate(token);
     } catch (err) {
-      console.error("Scan error:", err);
-      setError("Invalid QR code format");
+      console.error("Invalid QR format:", err);
+      setError("Invalid or unsupported QR code");
       setScanning(true);
     }
   };
 
   const handleError = (err) => {
     console.error("Camera error:", err);
-    setError("Camera access denied. Please enable camera permissions.");
+    setError("Camera access denied. Please enable permissions.");
   };
 
   return (
@@ -90,7 +101,7 @@ export default function QRScanner() {
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+            ❌ {error}
           </div>
         )}
 
@@ -107,16 +118,13 @@ export default function QRScanner() {
           <Scanner
             onScan={handleScan}
             onError={handleError}
-            constraints={{
-              facingMode: "environment",
-              aspectRatio: 1,
-            }}
+            constraints={{ facingMode: "environment", aspectRatio: 1 }}
           />
         </div>
 
         <div className="mt-4 text-center">
           {scanning ? (
-            <p className="text-gray-600">📱 Point camera at QR code</p>
+            <p className="text-gray-600">📱 Point your camera at the QR code</p>
           ) : (
             <p className="text-blue-600 font-semibold animate-pulse">
               Processing...
