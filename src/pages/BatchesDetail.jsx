@@ -137,9 +137,7 @@ const BatchesDetail = () => {
       </div>
 
       {/* ===== QR Codes Section ===== */}
-      {(user?.role === "PRINTER" ||
-        user?.role === "ADMIN" ||
-        user?.role === "CUTTER") && (
+      {(user?.role === "ADMIN" || user?.role === "DESIGNER") && (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg rounded-xl p-8 border border-blue-100">
           <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
             <svg
@@ -159,7 +157,7 @@ const BatchesDetail = () => {
           </h2>
 
           {/* Batch QR */}
-          {batch.qrCodeUrl ? (
+          {batch.qrCodeUrl && (
             <div className="mb-8 text-center">
               <div className="inline-block bg-white p-6 rounded-2xl shadow-xl border-4 border-indigo-200">
                 <h3 className="font-semibold mb-3 text-indigo-900 text-lg">
@@ -173,12 +171,15 @@ const BatchesDetail = () => {
                 <p className="text-sm text-gray-600 mt-3 font-medium">
                   {batch.name}
                 </p>
+                <a
+                  href={batch.qrCodeUrl}
+                  download={`${batch.name}-QR.png`}
+                  className="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+                >
+                  Download Batch QR
+                </a>
               </div>
             </div>
-          ) : (
-            <p className="text-gray-500 mb-6 text-center">
-              No batch QR available.
-            </p>
           )}
 
           {/* Item QRs */}
@@ -225,6 +226,15 @@ const BatchesDetail = () => {
                     <p className="text-xs text-indigo-600 font-medium mt-1">
                       {item.sku}
                     </p>
+                    {item.qrCodeUrl && (
+                      <a
+                        href={item.qrCodeUrl}
+                        download={`${item.productTitle}-QR.png`}
+                        className="mt-2 inline-block px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition"
+                      >
+                        Download
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

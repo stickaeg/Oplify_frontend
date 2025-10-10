@@ -1,25 +1,82 @@
-// src/components/QRScanner.jsx
 import { useState } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { scanBatch, scanItemCutter } from "../api/agentsApi"; // adjust import path
 
 export default function QRScanner() {
   const [scanning, setScanning] = useState(true);
+  const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleScan = (result) => {
+  // ✅ Define React Query mutations
+  const batchMutation = useMutation({
+    mutationFn: scanBatch,
+    onSuccess: (data) => {
+      setMessage(`✅ ${data.message || "Batch scanned successfully"}`);
+      console.log("Batch Scan Result:", data);
+    },
+    onError: (err) => {
+      console.error(err);
+      setError(err.response?.data?.error || "Failed to scan batch");
+    },
+    onSettled: () => setScanning(true),
+  });
+
+  const itemMutation = useMutation({
+    mutationFn: scanItemCutter,
+    onSuccess: (data) => {
+      setMessage(`✅ ${data.message || "Item scanned successfully"}`);
+      console.log("Item Scan Result:", data);
+    },
+    onError: (err) => {
+      console.error(err);
+      setError(err.response?.data?.error || "Failed to scan item");
+    },
+    onSettled: () => setScanning(true),
+  });
+
+  // 🧠 Handle scanned result
+  const handleScan = async (result) => {
     if (!scanning || !result?.[0]?.rawValue) return;
 
     setScanning(false);
-    const scannedUrl = result[0].rawValue;
+    setError(null);
+    setMessage("⏳ Processing QR...");
 
-    console.log("Scanned QR:", scannedUrl);
+    try {
+      const scannedUrl = result[0].rawValue;
+      console.log("Scanned QR:", scannedUrl);
 
-    // Just redirect to the scanned URL - backend handles everything
-    window.location.href = scannedUrl;
+      // Extract token and type from URL
+      const url = new URL(scannedUrl);
+      const parts = url.pathname.split("/");
+      const type = parts.includes("batch") ? "batch" : "item";
+      const token = parts.pop();
+
+      // 🧩 Check role before calling API
+      if (type === "batch" && user?.role !== "PRINTER") {
+        setError("Only PRINTER users can scan batches.");
+        setScanning(true);
+        return;
+      }
+      if (type === "item" && user?.role !== "CUTTER") {
+        setError("Only CUTTER users can scan items.");
+        setScanning(true);
+        return;
+      }
+
+      // ✅ Call correct mutation
+      if (type === "batch") batchMutation.mutate(token);
+      else itemMutation.mutate(token);
+    } catch (err) {
+      console.error("Scan error:", err);
+      setError("Invalid QR code format");
+      setScanning(true);
+    }
   };
 
   const handleError = (err) => {
@@ -39,6 +96,12 @@ export default function QRScanner() {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
+          </div>
+        )}
+
+        {message && !error && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {message}
           </div>
         )}
 
