@@ -42,10 +42,7 @@ const AppRoutes = () => {
               <Route path="/batches/:batchId" element={<BatchesDetail />} />
               <Route path="/scan/printer" element={<PrinterScanner />} />
               <Route path="/scan/cutter" element={<CutterScanner />} />
-              <Route
-                path="/scan/fulfillment"
-                element={<FulfillmentScanner />}
-              />
+              <Route path="/fulfillment" element={<FulfillmentScanner />} />
               <Route path="/orders/:id" element={<OrderDetail />} />
               <Route path="/me" element={<UserInfo />} />
             </Route>

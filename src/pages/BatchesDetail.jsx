@@ -203,15 +203,6 @@ const BatchesDetail = () => {
               📱 Open Cutter Scanner
             </a>
           )}
-
-          {user?.role === "FULFILLMENT" && batch.status === "CUT" && (
-            <a
-              href="/scan/fulfillment"
-              className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-3 rounded-lg transition"
-            >
-              📱 Open Fulfillment Scanner
-            </a>
-          )}
         </div>
       )}
       {/* ===== Batch Files ===== */}
@@ -370,17 +361,19 @@ const BatchesDetail = () => {
                         key={unit.id}
                         className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg shadow hover:shadow-md transition"
                       >
-                        <div className="bg-white p-2 rounded-lg border border-gray-200 mb-2 flex items-center justify-center">
-                          {unit.qrCodeUrl ? (
-                            <img
-                              src={unit.qrCodeUrl}
-                              alt="QR"
-                              className="w-24 h-24 object-contain"
-                            />
-                          ) : (
-                            <p className="text-xs text-gray-400">No QR</p>
-                          )}
-                        </div>
+                        {user.role === "DESIGNER" && (
+                          <div className="bg-white p-2 rounded-lg border border-gray-200 mb-2 flex items-center justify-center">
+                            {unit.qrCodeUrl ? (
+                              <img
+                                src={unit.qrCodeUrl}
+                                alt="QR"
+                                className="w-24 h-24 object-contain"
+                              />
+                            ) : (
+                              <p className="text-xs text-gray-400">No QR</p>
+                            )}
+                          </div>
+                        )}
 
                         <p className="text-xs font-semibold text-gray-800 line-clamp-2">
                           {unit.productTitle}

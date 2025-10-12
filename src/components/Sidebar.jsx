@@ -17,6 +17,7 @@ const menuByRole = {
     { name: "Products", path: "/products", icon: <FiUsers /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Batches", path: "/batches", icon: <FiArchive /> },
+    { name: "Qr", path: "/fulfillment", icon: <FiArchive /> },
   ],
 
   designer: [
@@ -30,6 +31,11 @@ const menuByRole = {
   cutter: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
     { name: "Orders", path: "/orders", icon: <FiHome /> },
+  ],
+  fulfillment: [
+    { name: "Batches", path: "/batches", icon: <FiLayers /> },
+    { name: "Orders", path: "/orders", icon: <FiHome /> },
+    { name: "Qr", path: "/fulfillment", icon: <FiArchive /> },
   ],
 };
 
