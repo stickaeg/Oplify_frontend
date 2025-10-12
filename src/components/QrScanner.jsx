@@ -5,14 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { scanBatch, scanItemCutter } from "../api/agentsApi";
 
-export default function QRScanner() {
+export default function QRScanner({ onScan }) {
   const [scanning, setScanning] = useState(true);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Handle success & error display
   const handleSuccess = (data) => {
     setMessage(data.message || "✅ Scan successful");
     setError(null);
@@ -29,7 +28,6 @@ export default function QRScanner() {
     setMessage(null);
   };
 
-  // ✅ React Query: Batch Mutation
   const batchMutation = useMutation({
     mutationFn: scanBatch,
     onSuccess: handleSuccess,
@@ -37,7 +35,6 @@ export default function QRScanner() {
     onSettled: () => setScanning(true),
   });
 
-  // ✅ React Query: Item/Unit Mutation
   const itemMutation = useMutation({
     mutationFn: scanItemCutter,
     onSuccess: handleSuccess,
@@ -45,7 +42,6 @@ export default function QRScanner() {
     onSettled: () => setScanning(true),
   });
 
-  // 🧠 Handle QR scan result
   const handleScan = async (result) => {
     if (!scanning || !result?.[0]?.rawValue) return;
 
@@ -62,17 +58,21 @@ export default function QRScanner() {
       const token = parts.pop();
       const type = parts.includes("batch") ? "batch" : "item";
 
-      // 🧩 Role-based logic
+      // 🟩 If parent provided custom handler (e.g., Fulfillment)
+      if (onScan) {
+        onScan(token);
+        setScanning(true);
+        return;
+      }
+
+      // 🧩 Default role-based logic
       if (type === "batch" && user?.role !== "PRINTER") {
         setError("Only PRINTER users can scan batches.");
         setScanning(true);
         return;
       }
 
-      if (
-        type === "item" &&
-        !["PRINTER", "CUTTER", "FULLFILLMENT"].includes(user?.role)
-      ) {
+      if (type === "item" && !["PRINTER", "CUTTER"].includes(user?.role)) {
         setError("Only PRINTER or CUTTER users can scan items.");
         setScanning(true);
         return;
