@@ -69,7 +69,10 @@ export default function QRScanner() {
         return;
       }
 
-      if (type === "item" && !["PRINTER", "CUTTER"].includes(user?.role)) {
+      if (
+        type === "item" &&
+        !["PRINTER", "CUTTER", "FULLFILLMENT"].includes(user?.role)
+      ) {
         setError("Only PRINTER or CUTTER users can scan items.");
         setScanning(true);
         return;
