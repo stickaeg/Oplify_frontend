@@ -9,7 +9,7 @@ export default function FulfillmentScanner() {
 
   if (isLoading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" />;
-  if (user.role !== "FULFILLMENT" && user.role !== "ADMIN") {
+  if (user.role !== "FULLFILLMENT" && user.role !== "ADMIN") {
     return (
       <div className="text-center p-8 text-red-600 font-semibold">
         Access Denied – Fulfillment Only
