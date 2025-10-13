@@ -74,7 +74,7 @@ export default function FulfillmentScanner() {
         </div>
 
         {/* QR Scanner */}
-        <QRScanner onScan={handleScan} />
+        <QRScanner />
 
         {/* Loading / Error / Data States */}
         {mutation.isPending && (

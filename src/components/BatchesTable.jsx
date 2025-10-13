@@ -48,6 +48,8 @@ const BatchesTable = () => {
 
   const { data: batches, page: currentPage, pages } = data;
 
+  console.log(batches);
+
   return (
     <div className="space-y-4 relative">
       <h2 className="text-xl font-bold">Batches</h2>
