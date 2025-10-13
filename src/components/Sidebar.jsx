@@ -32,7 +32,7 @@ const menuByRole = {
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
     { name: "Orders", path: "/orders", icon: <FiHome /> },
   ],
-  fulfillment: [
+  fullfillment: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
     { name: "Orders", path: "/orders", icon: <FiHome /> },
     { name: "Qr", path: "/fulfillment", icon: <FiArchive /> },

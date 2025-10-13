@@ -18,21 +18,22 @@ const statusColors = {
   DESIGNING: "bg-purple-500",
   DESIGNED: "bg-violet-500",
   PRINTING: "bg-indigo-500",
+  PRINTED: "bg-indigo-700",
   CUTTING: "bg-pink-500",
+  CUT: "bg-pink-700",
   FULFILLMENT: "bg-teal-500",
   COMPLETED: "bg-green-600",
   CANCELLED: "bg-red-500",
 };
 
-const BatchesDetail = () => {
+export default function BatchesDetail() {
   const { batchId } = useParams();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState(null);
-  const { user } = useAuth();
-
   const [isUploading, setIsUploading] = useState(false);
 
-  // === Batch Details ===
+  // === Fetch batch ===
   const {
     data: batch,
     isLoading,
@@ -44,7 +45,6 @@ const BatchesDetail = () => {
     enabled: !!batchId,
   });
 
-  console.log(batch);
   // === Google Files ===
   const {
     data: googleFiles = [],
@@ -99,7 +99,6 @@ const BatchesDetail = () => {
     }
   };
 
-  // === Render ===
   if (isLoading) return <p className="text-center py-10">Loading batch...</p>;
   if (isError)
     return (
@@ -108,12 +107,12 @@ const BatchesDetail = () => {
       </p>
     );
 
+  console.log(batch);
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
       {/* ===== Batch Info ===== */}
       <div className="bg-white shadow rounded p-6">
         <h1 className="text-2xl font-bold mb-2">{batch.name}</h1>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <p>
             <span className="font-semibold">Capacity:</span> {batch.capacity}/
@@ -130,82 +129,19 @@ const BatchesDetail = () => {
                 statusColors[batch.status] || "bg-gray-400"
               }`}
             >
-              {batch.status.replaceAll("_", " ")}
+              {batch.status}
             </span>
           </p>
+          {batch.rules?.length > 0 && (
+            <p>
+              <span className="font-semibold">Rule:</span>{" "}
+              {batch.rules.map((r) => r.name).join(", ")}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ===== QR Codes Section ===== */}
-      {(user?.role === "ADMIN" || user?.role === "DESIGNER") && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg rounded-xl p-8 border border-blue-100">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
-            <svg
-              className="w-6 h-6 text-indigo-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-              />
-            </svg>
-            Batch QR Codes
-          </h2>
-
-          {/* Batch QR */}
-          {batch.qrCodeUrl && (
-            <div className="mb-8 text-center">
-              <div className="inline-block bg-white p-6 rounded-2xl shadow-xl border-4 border-indigo-200">
-                <h3 className="font-semibold mb-3 text-indigo-900 text-lg">
-                  📦 Whole Batch QR Code
-                </h3>
-                <img
-                  src={batch.qrCodeUrl}
-                  alt="Batch QR"
-                  className="mx-auto w-48 h-48 rounded-lg"
-                />
-                <p className="text-sm text-gray-600 mt-3 font-medium">
-                  {batch.name}
-                </p>
-                <a
-                  href={batch.qrCodeUrl}
-                  download={`${batch.name}-QR.png`}
-                  className="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
-                >
-                  Download Batch QR
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {batch.qrCodeUrl && (
-        <div className="mt-6 flex justify-center gap-4">
-          {user?.role === "PRINTER" && (
-            <a
-              href="/scan/printer"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition"
-            >
-              📱 Open Printer Scanner
-            </a>
-          )}
-
-          {user?.role === "CUTTER" && batch.status === "PRINTED" && (
-            <a
-              href="/scan/cutter"
-              className="inline-flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold px-6 py-3 rounded-lg transition"
-            >
-              📱 Open Cutter Scanner
-            </a>
-          )}
-        </div>
-      )}
-      {/* ===== Batch Files ===== */}
+      {/* ===== Files ===== */}
       <div className="bg-white shadow rounded p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Batch Files</h2>
@@ -326,94 +262,49 @@ const BatchesDetail = () => {
         )}
       </div>
 
-      {/* ===== Batch Items & Units ===== */}
-      <div className="bg-white shadow rounded p-6">
-        <h2 className="text-xl font-semibold mb-4">Batch Items & Units</h2>
+      {/* ===== Batch Items (Card Style) ===== */}
+      <div className="bg-white shadow rounded p-4">
+        <h2 className="text-xl font-semibold mb-4">Batch Items</h2>
+        <div className="space-y-5">
+          {batch.items?.length ? (
+            batch.items.map((item) => {
+              return (
+                <div
+                  key={item.id}
+                  className="border border-gray-200 rounded-lg p-4 shadow-sm"
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={item.productImgUrl}
+                      alt={item.productTitle}
+                      className="w-20 h-20 object-contain rounded"
+                    />
 
-        {batch.items?.length ? (
-          <div className="space-y-8">
-            {batch.items.map((item) => (
-              <div
-                key={item.id}
-                className="border border-gray-200 rounded-lg p-5 shadow-sm"
-              >
-                {/* 🧱 Item Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                  <div>
-                    <p className="font-semibold text-lg text-gray-800">
-                      {item.units?.[0]?.productTitle || "Unknown Product"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Store: {item.units?.[0]?.storeName || "—"}
-                    </p>
-                  </div>
-                  <div className="text-sm text-gray-600 mt-2 sm:mt-0">
-                    <p>Order: #{item.units?.[0]?.orderNumber || "—"}</p>
-                    <p>Units: {item.totalUnits}</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">
+                        {item?.productTitle || "—"}
+                      </p>
+                      <p className="text-gray-600 text-sm">
+                        {item?.sku || "-"}
+                      </p>
+                      <p className="capitalize  text-gray-600 ">
+                        Store: {item?.storeName || "-"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">
+                        Units: {item.totalUnits}
+                      </p>
+                    </div>
                   </div>
                 </div>
-
-                {/* 🧩 Unit Grid */}
-                {item.units?.length ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {item.units.map((unit) => (
-                      <div
-                        key={unit.id}
-                        className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg shadow hover:shadow-md transition"
-                      >
-                        {user.role === "DESIGNER" && (
-                          <div className="bg-white p-2 rounded-lg border border-gray-200 mb-2 flex items-center justify-center">
-                            {unit.qrCodeUrl ? (
-                              <img
-                                src={unit.qrCodeUrl}
-                                alt="QR"
-                                className="w-24 h-24 object-contain"
-                              />
-                            ) : (
-                              <p className="text-xs text-gray-400">No QR</p>
-                            )}
-                          </div>
-                        )}
-
-                        <p className="text-xs font-semibold text-gray-800 line-clamp-2">
-                          {unit.productTitle}
-                        </p>
-                        <p className="text-xs text-gray-500">{unit.sku}</p>
-
-                        <p
-                          className={`text-[10px] mt-1 px-2 py-1 rounded-full text-white inline-block ${
-                            statusColors[unit.status] || "bg-gray-400"
-                          }`}
-                        >
-                          {unit.status}
-                        </p>
-
-                        {unit.qrCodeUrl && (
-                          <a
-                            href={unit.qrCodeUrl}
-                            download={`${unit.productTitle}-QR.png`}
-                            className="block mt-2 text-center text-xs text-blue-600 font-medium hover:underline"
-                          >
-                            Download
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-400 text-sm">
-                    No units found for this item.
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500">No items in this batch.</p>
-        )}
+              );
+            })
+          ) : (
+            <p className="text-gray-500">No items in this batch.</p>
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default BatchesDetail;
+}

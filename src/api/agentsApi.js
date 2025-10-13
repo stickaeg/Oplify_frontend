@@ -109,12 +109,7 @@ export const scanBatch = async (token) => {
   return res.data;
 };
 
-export const scanItemCutter = async (token) => {
-  const res = await axiosClient.get(`/scan/unit/${token}`);
-  return res.data;
-};
-
-export const scanItemFulfillment = async (token) => {
+export const scanUnitFulfillment = async (token) => {
   const res = await axiosClient.get(`/scan/item-fulfillment/${token}`);
   return res.data;
 };
