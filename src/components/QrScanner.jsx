@@ -52,7 +52,7 @@ export default function QrScanner({ onSuccess }) {
       const parts = url.pathname.split("/");
       const token = parts.pop();
 
-      if (user?.role !== "FULFILLMENT") {
+      if (user?.role !== "FULLFILLMENT") {
         setError("Only FULFILLMENT users can scan these QR codes.");
         setScanning(true);
         return;
