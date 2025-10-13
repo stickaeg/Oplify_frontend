@@ -17,6 +17,8 @@ export default function FulfillmentScanner() {
     );
   }
 
+  
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto px-4">
@@ -33,7 +35,7 @@ export default function FulfillmentScanner() {
         {/* QR Scanner */}
         <QrScanner
           onSuccess={(data) => {
-            if (data?.data?.order) setOrder(data.data.order);
+            if (data?.order) setOrder(data.order);
           }}
         />
 
