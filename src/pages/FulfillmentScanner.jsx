@@ -25,7 +25,7 @@ export default function FulfillmentScanner() {
         {/* Header */}
         <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-6 mb-6">
           <h1 className="text-3xl font-bold text-teal-900 mb-2">
-            📦 Fulfillment Scanner
+            Fulfillment Scanner
           </h1>
           <p className="text-teal-700">
             Scan each item QR code when <strong>packing into box</strong>

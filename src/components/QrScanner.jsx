@@ -107,7 +107,7 @@ export default function QrScanner({ onSuccess }) {
 
         <div className="mt-4 text-center">
           {scanning ? (
-            <p className="text-gray-600">📦 Point your camera at the QR</p>
+            <p className="text-gray-600"> Point your camera at the QR</p>
           ) : (
             <p className="text-blue-600 font-semibold animate-pulse">
               Processing...

@@ -6,6 +6,7 @@ import {
   FiShoppingBag,
   FiLayers,
   FiArchive,
+  FiCommand,
 } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +18,7 @@ const menuByRole = {
     { name: "Products", path: "/products", icon: <FiUsers /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Batches", path: "/batches", icon: <FiArchive /> },
-    { name: "Qr", path: "/fulfillment", icon: <FiArchive /> },
+    { name: "Scanner", path: "/fulfillment", icon: <FiCommand /> },
   ],
 
   designer: [
@@ -35,7 +36,7 @@ const menuByRole = {
   fullfillment: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
     { name: "Orders", path: "/orders", icon: <FiHome /> },
-    { name: "Qr", path: "/fulfillment", icon: <FiArchive /> },
+    { name: "Scanner", path: "/fulfillment", icon: <FiCommand /> },
   ],
 };
 
