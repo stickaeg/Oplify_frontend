@@ -1,75 +1,195 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom"; // <--- import
-import { getOrders } from "../api/agentsApi";
+import { useNavigate } from "react-router-dom";
+import { getOrders, getStores } from "../api/agentsApi";
 import Table from "./Table";
 import Spinner from "./Loading";
 
 const OrdersTable = () => {
   const [page, setPage] = useState(1);
   const limit = 10;
-  const navigate = useNavigate(); //
+  const navigate = useNavigate();
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["orders", page, limit],
-    queryFn: () => getOrders({ page, limit }),
+  // ===== Filters =====
+  const [storeId, setStoreId] = useState("");
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // ===== Fetch Stores =====
+  const { data: stores = [] } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+    staleTime: 1000 * 60 * 10, // avoid refetching too often
   });
 
+  // ===== Fetch Orders =====
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetching, // used for soft reload state
+  } = useQuery({
+    queryKey: ["orders", page, limit, storeId, status, debouncedSearch],
+    queryFn: () =>
+      getOrders({
+        page,
+        limit,
+        storeId: storeId || undefined,
+        status: status || undefined,
+        search: debouncedSearch || undefined,
+      }),
+    placeholderData: keepPreviousData, // ✅ keep old data during refetch
+    staleTime: 1000 * 60 * 2,
+  });
+
+  // ===== Loading States =====
   if (isLoading) return <Spinner />;
   if (isError) return <p>Failed to load orders</p>;
 
   const { data: orders, page: currentPage, pages } = data;
 
   const handleRowClick = (orderId) => {
-    navigate(`/orders/${orderId}`); // Redirect to order details page
+    navigate(`/orders/${orderId}`);
   };
 
   return (
-    <div className="space-y-4 relative">
+    <div className="space-y-6 relative">
+      {/* ===== Header ===== */}
       <h2 className="text-xl font-bold">Orders</h2>
 
-      <Table>
-        <Table.Head>
-          <Table.HeaderCell>Order Number</Table.HeaderCell>
-          <Table.HeaderCell>Store</Table.HeaderCell>
-          <Table.HeaderCell>Total Price</Table.HeaderCell>
-          <Table.HeaderCell>Status</Table.HeaderCell>
-          <Table.HeaderCell>Created At</Table.HeaderCell>
-        </Table.Head>
-        <Table.Body>
-          {orders.map((order) => (
-            <Table.Row
-              key={order.id}
-              onClick={() => handleRowClick(order.id)} // entire row clickable
-            >
-              <Table.Cell>#{order.orderNumber}</Table.Cell>
-              <Table.Cell>{order.store?.name || "—"}</Table.Cell>
-              <Table.Cell>EGP {order.totalPrice?.toFixed(2) || 0}</Table.Cell>
-              <Table.Cell>{order.status || "-"}</Table.Cell>
-              <Table.Cell>
-                {new Date(order.createdAt).toLocaleString()}
-              </Table.Cell>
-            </Table.Row>
-          ))}
-        </Table.Body>
-      </Table>
+      {/* ===== Filters ===== */}
+      <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        {/* Store Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Store
+          </label>
+          <select
+            value={storeId}
+            onChange={(e) => {
+              setStoreId(e.target.value);
+              setPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-48 bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 transition-colors"
+          >
+            <option value="">All Stores</option>
+            {stores.data?.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Pagination controls */}
+        {/* Status Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-40 bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 transition-colors"
+          >
+            <option value="">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="WAITING_BATCH">Waiting batch</option>
+            <option value="BATCHED">Batched</option>
+            <option value="DESIGNING">Designing</option>
+            <option value="DESIGNED">Designed</option>
+            <option value="PRINTING">Printing</option>
+            <option value="PRINTED">Printed</option>
+            <option value="CUTTING">Cutting</option>
+            <option value="CUT">Cut</option>
+            <option value="FULFILLMENT">Fulfillment</option>
+            <option value="PACKED">Packed</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+
+        {/* Search Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search (Order #)
+          </label>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Enter order number..."
+            className="border border-gray-300 rounded-lg px-3 py-2 w-64 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* ===== Orders Table ===== */}
+      <div className="relative">
+        {/* ✅ Subtle table-only spinner */}
+        {isFetching && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-lg z-10">
+            <Spinner />
+          </div>
+        )}
+
+        <Table>
+          <Table.Head>
+            <Table.HeaderCell>Order Number</Table.HeaderCell>
+            <Table.HeaderCell>Store</Table.HeaderCell>
+            <Table.HeaderCell>Total Price</Table.HeaderCell>
+            <Table.HeaderCell>Status</Table.HeaderCell>
+            <Table.HeaderCell>Created At</Table.HeaderCell>
+          </Table.Head>
+          <Table.Body>
+            {orders.map((order) => (
+              <Table.Row
+                key={order.id}
+                onClick={() => handleRowClick(order.id)}
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <Table.Cell>#{order.orderNumber}</Table.Cell>
+                <Table.Cell>{order.store?.name || "—"}</Table.Cell>
+                <Table.Cell>EGP {order.totalPrice?.toFixed(2) || 0}</Table.Cell>
+                <Table.Cell>{order.status || "-"}</Table.Cell>
+                <Table.Cell>
+                  {new Date(order.createdAt).toLocaleString()}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+      </div>
+
+      {/* ===== Pagination ===== */}
       <div className="flex items-center justify-center gap-4">
         <button
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-wh ite disabled:hover:border-gray-300 transition-colors cursor-pointer"
-          disabled={currentPage === 1}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={currentPage === 1 || isFetching}
           onClick={() => setPage((p) => p - 1)}
         >
           ← Previous
         </button>
         <span className="text-sm font-medium text-gray-700">
-          Page <span className="font-semibold">{currentPage}</span> of{" "}
-          <span className="font-semibold">{pages}</span>
+          Page <b>{currentPage}</b> of <b>{pages}</b>
         </span>
         <button
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-colors cursor-pointer"
-          disabled={currentPage === pages}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={currentPage === pages || isFetching}
           onClick={() => setPage((p) => p + 1)}
         >
           Next →
