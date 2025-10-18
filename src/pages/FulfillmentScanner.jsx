@@ -106,7 +106,9 @@ export default function FulfillmentScanner() {
                         <div className="flex justify-between items-center">
                           <p className="font-medium">
                             Batch Name:{" "}
-                            <span className="text-gray-600">{batch.name}</span>
+                            <span className="text-gray-600">
+                              {batch.batch?.name || "N/A"}
+                            </span>
                           </p>
                           <span
                             className={`text-sm px-2 py-1 rounded-full ${
