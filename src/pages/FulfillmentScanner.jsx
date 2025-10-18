@@ -59,29 +59,94 @@ export default function FulfillmentScanner() {
                 {order.status}
               </strong>
             </p>
-            <div className="space-y-2">
+
+            <div className="space-y-6">
               {order.items?.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between items-center border-b py-2"
+                  className="border rounded-lg p-4 bg-gray-50 shadow-sm"
                 >
-                  <div>
-                    <p className="font-medium">
-                      {item.product?.title || item.name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {item.quantity} units
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={item.product?.imgUrl}
+                      alt={item.product?.title}
+                      className="w-16 h-16 object-cover rounded-md"
+                    />
+                    <div>
+                      <p className="font-semibold text-lg">
+                        {item.product?.title}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {item.variant?.sku} — {item.quantity} units total
+                      </p>
+                      <p className="text-sm mt-1">
+                        Item status:{" "}
+                        <span
+                          className={`font-semibold ${
+                            item.status === "PACKED"
+                              ? "text-green-600"
+                              : item.status === "CUT"
+                              ? "text-blue-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </p>
+                    </div>
                   </div>
-                  <p
-                    className={`text-sm font-semibold ${
-                      item.status === "PACKED"
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {item.status}
-                  </p>
+
+                  {/* Batch Items */}
+                  <div className="mt-4 pl-4 border-l-2 border-teal-300 space-y-3">
+                    {item.BatchItem?.map((batch) => (
+                      <div
+                        key={batch.id}
+                        className="bg-white p-3 rounded-md border shadow-sm"
+                      >
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium">
+                            Batch ID:{" "}
+                            <span className="text-gray-600">
+                              {batch.batchId}
+                            </span>
+                          </p>
+                          <span
+                            className={`text-sm px-2 py-1 rounded-full ${
+                              batch.status === "PACKED"
+                                ? "bg-green-100 text-green-700"
+                                : batch.status === "CUT"
+                                ? "bg-blue-100 text-blue-700"
+                                : batch.status === "WAITING_BATCH"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {batch.status}
+                          </span>
+                        </div>
+
+                        {/* Units */}
+                        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {batch.units?.map((unit) => (
+                            <div
+                              key={unit.id}
+                              className={`text-xs border rounded-md px-2 py-1 text-center ${
+                                unit.status === "PACKED"
+                                  ? "bg-green-50 border-green-300 text-green-700"
+                                  : unit.status === "CUT"
+                                  ? "bg-blue-50 border-blue-300 text-blue-700"
+                                  : unit.status === "WAITING_BATCH"
+                                  ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                                  : "bg-gray-50 border-gray-300 text-gray-600"
+                              }`}
+                            >
+                              {unit.status}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
