@@ -22,10 +22,6 @@ const ProductsTable = () => {
       setDebouncedProductType(productType);
     }, 500);
 
-    useEffect(() => {
-      setProductType("");
-    }, [storeId]);
-
     return () => clearTimeout(handler); // cleanup old timer
   }, [productType]);
 
@@ -43,6 +39,7 @@ const ProductsTable = () => {
       ),
     enabled: !!storeId, // only run when a store is selected
   });
+
   // 📦 Fetch products with filters (using debouncedProductType)
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ["products", page, limit, storeId, debouncedProductType, isPod],
@@ -106,10 +103,17 @@ const ProductsTable = () => {
               setProductType(e.target.value);
               setPage(1);
             }}
-            className="border border-gray-300 rounded-lg px-3 py-2 w-48"
             disabled={!storeId || typesLoading}
+            className={`border rounded-lg px-3 py-2 w-48 transition-colors duration-200
+      ${
+        !storeId || typesLoading
+          ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+          : "bg-white text-gray-800 border-gray-300 hover:border-gray-400 focus:border-blue-500"
+      }`}
           >
-            <option value="">All Types</option>
+            <option value="">
+              {typesLoading ? "Loading..." : "All Types"}
+            </option>
             {productTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
