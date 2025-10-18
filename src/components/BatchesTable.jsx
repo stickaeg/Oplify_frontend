@@ -61,6 +61,14 @@ const BatchesTable = () => {
     <div className="space-y-4 relative">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Batches</h2>
+        {(user?.role === "PRINTER" || user?.role === "ADMIN") && (
+          <button
+            onClick={() => navigate("/scan/printer")}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow transition"
+          >
+            🖨️ Printer Scanner
+          </button>
+        )}
 
         {/* 🔽 Filter by Rule Name */}
         <div>
