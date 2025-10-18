@@ -15,12 +15,12 @@ const OrdersTable = () => {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Debounce search input
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 400);
+    const handler = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(handler);
   }, [search]);
 
@@ -28,7 +28,7 @@ const OrdersTable = () => {
   const { data: stores = [] } = useQuery({
     queryKey: ["stores"],
     queryFn: getStores,
-    staleTime: 1000 * 60 * 10, // avoid refetching too often
+    staleTime: 1000 * 60 * 10,
   });
 
   // ===== Fetch Orders =====
@@ -36,9 +36,9 @@ const OrdersTable = () => {
     data,
     isLoading,
     isError,
-    isFetching, // used for soft reload state
+    isFetching,
   } = useQuery({
-    queryKey: ["orders", page, limit, storeId, status, debouncedSearch],
+    queryKey: ["orders", page, limit, storeId, status, debouncedSearch, startDate, endDate],
     queryFn: () =>
       getOrders({
         page,
@@ -46,33 +46,29 @@ const OrdersTable = () => {
         storeId: storeId || undefined,
         status: status || undefined,
         search: debouncedSearch || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
-    placeholderData: keepPreviousData, // ✅ keep old data during refetch
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 2,
   });
 
-  // ===== Loading States =====
   if (isLoading) return <Spinner />;
   if (isError) return <p>Failed to load orders</p>;
 
   const { data: orders, page: currentPage, pages } = data;
 
-  const handleRowClick = (orderId) => {
-    navigate(`/orders/${orderId}`);
-  };
+  const handleRowClick = (orderId) => navigate(`/orders/${orderId}`);
 
   return (
     <div className="space-y-6 relative">
-      {/* ===== Header ===== */}
       <h2 className="text-xl font-bold">Orders</h2>
 
       {/* ===== Filters ===== */}
       <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         {/* Store Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Store
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
           <select
             value={storeId}
             onChange={(e) => {
@@ -92,9 +88,7 @@ const OrdersTable = () => {
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => {
@@ -120,7 +114,7 @@ const OrdersTable = () => {
           </select>
         </div>
 
-        {/* Search Filter */}
+        {/* Search Filter (Order #) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Search (Order #)
@@ -136,11 +130,37 @@ const OrdersTable = () => {
             className="border border-gray-300 rounded-lg px-3 py-2 w-64 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
           />
         </div>
+
+        {/* Date Range Filters */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-44 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => {
+              setEndDate(e.target.value);
+              setPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-44 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          />
+        </div>
       </div>
 
       {/* ===== Orders Table ===== */}
       <div className="relative">
-        {/* ✅ Subtle table-only spinner */}
         {isFetching && (
           <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-lg z-10">
             <Spinner />

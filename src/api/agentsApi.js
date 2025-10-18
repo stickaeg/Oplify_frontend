@@ -27,9 +27,11 @@ export const getOrders = async ({
   storeId,
   status,
   search,
+  startDate,
+  endDate,
 }) => {
   const res = await axiosClient.get("/orders", {
-    params: { page, limit, storeId, status, search },
+    params: { page, limit, storeId, status, search, startDate, endDate },
   });
   return res.data;
 };
