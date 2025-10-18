@@ -15,7 +15,7 @@ const RulesTable = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteRule,
     onSuccess: () => {
-      queryClient.invalidateQueries(["rules"]); // refresh rules list
+      queryClient.invalidateQueries(["rules"]);
     },
   });
 

@@ -3,12 +3,12 @@ import StoreTable from "../components/StoreTable";
 import RulesTable from "../components/RulesTable";
 import CreateStore from "../components/CreateStore";
 import CreateRule from "../components/CreateRule";
-import CreateBatch from "../components/CreateBatch"; // ✅ Import your new component
+import CreateBatch from "../components/CreateBatch";
 
 const Dashboard = () => {
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isRuleOpen, setIsRuleOpen] = useState(false);
-  const [isBatchOpen, setIsBatchOpen] = useState(false); // ✅ new state for batch modal
+  const [isBatchOpen, setIsBatchOpen] = useState(false);
 
   return (
     <div className="p-4 space-y-4">

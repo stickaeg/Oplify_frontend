@@ -34,7 +34,7 @@ const CreateRule = ({ onClose }) => {
   const mutation = useMutation({
     mutationFn: createRule,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules", selectedStore] });
+      queryClient.invalidateQueries(["rules"]);
       if (onClose) onClose();
     },
     onError: (err) => {
