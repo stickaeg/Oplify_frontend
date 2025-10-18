@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getProducts, getStores } from "../api/agentsApi";
+import { listProductTypesByStore } from "../api/adminsApi";
+
 import Table from "./Table";
 import Spinner from "./Loading";
 
@@ -20,6 +22,10 @@ const ProductsTable = () => {
       setDebouncedProductType(productType);
     }, 500);
 
+    useEffect(() => {
+      setProductType("");
+    }, [storeId]);
+
     return () => clearTimeout(handler); // cleanup old timer
   }, [productType]);
 
@@ -29,6 +35,14 @@ const ProductsTable = () => {
     queryFn: getStores,
   });
 
+  const { data: productTypes = [], isLoading: typesLoading } = useQuery({
+    queryKey: ["productTypes", storeId],
+    queryFn: () =>
+      listProductTypesByStore(
+        stores.data?.find((s) => s.id === storeId)?.name || ""
+      ),
+    enabled: !!storeId, // only run when a store is selected
+  });
   // 📦 Fetch products with filters (using debouncedProductType)
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ["products", page, limit, storeId, debouncedProductType, isPod],
@@ -81,21 +95,27 @@ const ProductsTable = () => {
           </select>
         </div>
 
-        {/* Product type filter (debounced) */}
+        {/* Product type filter (depends on store) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Product Type
           </label>
-          <input
-            type="text"
+          <select
             value={productType}
             onChange={(e) => {
               setProductType(e.target.value);
               setPage(1);
             }}
-            placeholder="e.g. Stickers"
             className="border border-gray-300 rounded-lg px-3 py-2 w-48"
-          />
+            disabled={!storeId || typesLoading}
+          >
+            <option value="">All Types</option>
+            {productTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* POD filter */}
@@ -117,7 +137,6 @@ const ProductsTable = () => {
           </select>
         </div>
       </div>
-
       {/* ===== Products Table ===== */}
       <Table>
         <Table.Head>
