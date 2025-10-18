@@ -105,10 +105,8 @@ export default function FulfillmentScanner() {
                       >
                         <div className="flex justify-between items-center">
                           <p className="font-medium">
-                            Batch ID:{" "}
-                            <span className="text-gray-600">
-                              {batch.batchId}
-                            </span>
+                            Batch Name:{" "}
+                            <span className="text-gray-600">{batch.name}</span>
                           </p>
                           <span
                             className={`text-sm px-2 py-1 rounded-full ${
