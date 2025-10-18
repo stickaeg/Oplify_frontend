@@ -3,7 +3,7 @@ import { Scanner } from "@yudiel/react-qr-scanner";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { scanUnitFulfillment } from "../api/agentsApi";
+import { scanBatch, scanUnitFulfillment } from "../api/agentsApi";
 
 export default function QrScanner({ onSuccess }) {
   const [scanning, setScanning] = useState(true);
@@ -12,32 +12,45 @@ export default function QrScanner({ onSuccess }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // === Define mutations ===
   const fulfillmentMutation = useMutation({
     mutationFn: scanUnitFulfillment,
-    onSuccess: (data) => {
-      setMessage(
-        data.message ||
-          "✅ Unit packed successfully (Fulfillment scan complete)"
-      );
-      setError(null);
-      setScanning(true);
-      console.log("Fulfillment Scan Success:", data);
-
-      // ✅ Pass result back to parent
-      if (onSuccess) onSuccess(data);
-    },
-    onError: (err) => {
-      console.error("Scan failed:", err);
-      const msg =
-        err?.response?.data?.error ||
-        err?.message ||
-        "Something went wrong while scanning the fulfillment QR";
-      setError(msg);
-      setMessage(null);
-      setScanning(true);
-    },
+    onSuccess: (data) => handleSuccess(data, "Fulfillment"),
+    onError: handleFailure,
   });
 
+  const batchMutation = useMutation({
+    mutationFn: scanBatch,
+    onSuccess: (data) => handleSuccess(data, "Batch"),
+    onError: handleFailure,
+  });
+
+  // === Shared handlers ===
+  const handleSuccess = (data, type) => {
+    setMessage(
+      data.message ||
+        (type === "Batch"
+          ? "✅ Batch scanned successfully!"
+          : "✅ Unit packed successfully!")
+    );
+    setError(null);
+    setScanning(true);
+    console.log(`${type} Scan Success:`, data);
+    if (onSuccess) onSuccess(data);
+  };
+
+  const handleFailure = (err) => {
+    console.error("Scan failed:", err);
+    const msg =
+      err?.response?.data?.error ||
+      err?.message ||
+      "Something went wrong while scanning the QR";
+    setError(msg);
+    setMessage(null);
+    setScanning(true);
+  };
+
+  // === QR Scan ===
   const handleScan = async (result) => {
     if (!scanning || !result?.[0]?.rawValue) return;
 
@@ -48,17 +61,22 @@ export default function QrScanner({ onSuccess }) {
     try {
       const scannedUrl = result[0].rawValue;
       console.log("📦 Scanned QR:", scannedUrl);
+
       const url = new URL(scannedUrl);
       const parts = url.pathname.split("/");
       const token = parts.pop();
 
-      if (user?.role !== "FULLFILLMENT") {
-        setError("Only FULFILLMENT users can scan these QR codes.");
+      // ✅ Handle based on role
+      if (user?.role === "FULLFILLMENT") {
+        fulfillmentMutation.mutate(token);
+      } else if (["PRINTER", "CUTTER"].includes(user?.role)) {
+        batchMutation.mutate(token);
+      } else {
+        setError(
+          "Only PRINTER, CUTTER, or FULLFILLMENT users can scan QR codes."
+        );
         setScanning(true);
-        return;
       }
-
-      fulfillmentMutation.mutate(token);
     } catch (err) {
       console.error("Invalid QR format:", err);
       setError("Invalid or unsupported QR code");
@@ -74,9 +92,7 @@ export default function QrScanner({ onSuccess }) {
   return (
     <div className="max-w-lg mx-auto p-6">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-center mb-2">
-          Fulfillment QR Scanner
-        </h2>
+        <h2 className="text-2xl font-bold text-center mb-2">QR Scanner</h2>
         <p className="text-center text-gray-600 mb-4">
           Logged in as: <span className="font-semibold">{user?.name}</span> (
           {user?.role})
