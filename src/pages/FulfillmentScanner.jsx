@@ -7,6 +7,7 @@ export default function FulfillmentScanner() {
   const { user, isLoading } = useAuth();
   const [order, setOrder] = useState(null);
 
+  console.log(order);
   if (isLoading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (user.role !== "FULLFILLMENT" && user.role !== "ADMIN") {
@@ -16,8 +17,6 @@ export default function FulfillmentScanner() {
       </div>
     );
   }
-
-  
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
