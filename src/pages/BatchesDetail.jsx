@@ -8,6 +8,8 @@ import {
   downloadFile,
   updateBatchStatus,
 } from "../api/agentsApi";
+import { useNavigate } from "react-router-dom";
+
 import Table from "../components/Table";
 import { useAuth } from "../context/AuthContext";
 
@@ -27,6 +29,8 @@ const statusColors = {
 };
 
 export default function BatchesDetail() {
+  const navigate = useNavigate();
+
   const { batchId } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -261,6 +265,17 @@ export default function BatchesDetail() {
           <p className="text-gray-500">No uploaded files found.</p>
         )}
       </div>
+
+      {user?.role === "PRINTER" && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigate("/scan/printer")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            Go to Printer Scanner
+          </button>
+        </div>
+      )}
 
       {/* ===== Batch Items (Card Style) ===== */}
       <div className="bg-white shadow rounded p-4">
