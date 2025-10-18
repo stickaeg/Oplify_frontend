@@ -12,6 +12,17 @@ export default function QrScanner({ onSuccess }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const handleFailure = (err) => {
+    console.error("Scan failed:", err);
+    const msg =
+      err?.response?.data?.error ||
+      err?.message ||
+      "Something went wrong while scanning the QR";
+    setError(msg);
+    setMessage(null);
+    setScanning(true);
+  };
+
   // === Define mutations ===
   const fulfillmentMutation = useMutation({
     mutationFn: scanUnitFulfillment,
@@ -37,17 +48,6 @@ export default function QrScanner({ onSuccess }) {
     setScanning(true);
     console.log(`${type} Scan Success:`, data);
     if (onSuccess) onSuccess(data);
-  };
-
-  const handleFailure = (err) => {
-    console.error("Scan failed:", err);
-    const msg =
-      err?.response?.data?.error ||
-      err?.message ||
-      "Something went wrong while scanning the QR";
-    setError(msg);
-    setMessage(null);
-    setScanning(true);
   };
 
   // === QR Scan ===
