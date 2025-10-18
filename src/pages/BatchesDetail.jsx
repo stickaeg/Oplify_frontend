@@ -276,6 +276,16 @@ export default function BatchesDetail() {
           </button>
         </div>
       )}
+      {user?.role === "CUTTER" && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigate("/scan/cutter")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            Go to Cutter Scanner
+          </button>
+        </div>
+      )}
 
       {/* ===== Batch Items (Card Style) ===== */}
       <div className="bg-white shadow rounded p-4">
