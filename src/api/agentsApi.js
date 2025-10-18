@@ -36,12 +36,14 @@ export const getOrders = async ({
   return res.data;
 };
 
-export const getBatches = async ({ page = 1, limit = 20 }) => {
+export const getBatches = async ({ page = 1, limit = 20, ruleName = "" }) => {
   const res = await axiosClient.get("/batches", {
-    params: { page, limit },
+    params: { page, limit, ruleName },
   });
   return res.data;
 };
+
+export const getRules = () => axiosClient.get("/batches/rules");
 
 export const getBatchById = async (batchId) => {
   const res = await axiosClient.get(`/batches/${batchId}`);

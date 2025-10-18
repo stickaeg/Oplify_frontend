@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom"; // 👈 import navigate
+import { useNavigate } from "react-router-dom";
 import Table from "./Table";
-import { getBatches, updateBatchStatus } from "../api/agentsApi";
 import Spinner from "./Loading";
 import ExportExcel from "./ExportExcel";
-import { useAuth } from "../context/AuthContext";
+import { getBatches, getRules, updateBatchStatus } from "../api/agentsApi";
 
 const BATCH_STATUSES = [
   "PENDING",
@@ -22,17 +21,27 @@ const BATCH_STATUSES = [
 
 const BatchesTable = () => {
   const [page, setPage] = useState(1);
+  const [selectedRule, setSelectedRule] = useState(""); // 👈 for filtering by rule name
   const limit = 10;
   const queryClient = useQueryClient();
-  const navigate = useNavigate(); // 👈 hook
+  const navigate = useNavigate();
 
+  // Fetch rules for dropdown
+  const { data: rulesData, isLoading: rulesLoading } = useQuery({
+    queryKey: ["rules"],
+    queryFn: getRules,
+  });
+
+  const rules = rulesData?.data || [];
+
+  // Fetch batches (depends on rule filter)
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["batches", page, limit],
-    queryFn: () => getBatches({ page, limit }),
+    queryKey: ["batches", page, limit, selectedRule],
+    queryFn: () => getBatches({ page, limit, ruleName: selectedRule }),
     keepPreviousData: true,
   });
 
-  const { mutate: changeStatus, isPending } = useMutation({
+  const { mutate: changeStatus } = useMutation({
     mutationFn: ({ batchId, status }) => updateBatchStatus(batchId, status),
     onSuccess: () => queryClient.invalidateQueries(["batches"]),
     onError: (err) => {
@@ -43,17 +52,41 @@ const BatchesTable = () => {
     },
   });
 
-  if (isLoading) return <Spinner />;
+  if (isLoading || rulesLoading) return <Spinner />;
   if (isError) return <p>Failed to load batches</p>;
 
   const { data: batches, page: currentPage, pages } = data;
 
-  console.log(batches);
-
   return (
     <div className="space-y-4 relative">
-      <h2 className="text-xl font-bold">Batches</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Batches</h2>
 
+        {/* 🔽 Filter by Rule Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Filter by Rule
+          </label>
+          <select
+            value={selectedRule}
+            onChange={(e) => {
+              setSelectedRule(e.target.value);
+              setPage(1);
+            }}
+            disabled={rulesLoading}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-48 text-gray-700 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            <option value="">All Rules</option>
+            {rules.map((rule) => (
+              <option key={rule.id} value={rule.name}>
+                {rule.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 🧾 Table */}
       <Table>
         <Table.Head>
           <Table.HeaderCell>Name</Table.HeaderCell>
@@ -72,6 +105,7 @@ const BatchesTable = () => {
             >
               <Table.Cell>{batch.name}</Table.Cell>
 
+              {/* Capacity */}
               <Table.Cell>
                 <div className="flex items-center gap-2">
                   <div className="w-32 h-4 bg-gray-200 rounded overflow-hidden">
@@ -92,42 +126,42 @@ const BatchesTable = () => {
                 </div>
               </Table.Cell>
 
-              {/* 👇 Protect dropdown */}
+              {/* Status Badge */}
               <Table.Cell>
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold
-      ${
-        batch.status === "PENDING"
-          ? "bg-yellow-200 text-yellow-800"
-          : batch.status === "WAITING_BATCH"
-          ? "bg-orange-200 text-orange-800"
-          : batch.status === "BATCHED"
-          ? "bg-blue-200 text-blue-800"
-          : batch.status === "DESIGNING"
-          ? "bg-purple-200 text-purple-800"
-          : batch.status === "DESIGNED"
-          ? "bg-indigo-200 text-violet-800"
-          : batch.status === "PRINTING"
-          ? "bg-teal-200 text-teal-800"
-          : batch.status === "CUTTING"
-          ? "bg-pink-200 text-pink-800"
-          : batch.status === "FULFILLMENT"
-          ? "bg-gray-200 text-gray-800"
-          : batch.status === "COMPLETED"
-          ? "bg-green-200 text-green-800"
-          : batch.status === "CANCELLED"
-          ? "bg-red-200 text-red-800"
-          : "bg-gray-100 text-gray-700"
-      }`}
+                    ${
+                      batch.status === "PENDING"
+                        ? "bg-yellow-200 text-yellow-800"
+                        : batch.status === "WAITING_BATCH"
+                        ? "bg-orange-200 text-orange-800"
+                        : batch.status === "BATCHED"
+                        ? "bg-blue-200 text-blue-800"
+                        : batch.status === "DESIGNING"
+                        ? "bg-purple-200 text-purple-800"
+                        : batch.status === "DESIGNED"
+                        ? "bg-indigo-200 text-violet-800"
+                        : batch.status === "PRINTING"
+                        ? "bg-teal-200 text-teal-800"
+                        : batch.status === "CUTTING"
+                        ? "bg-pink-200 text-pink-800"
+                        : batch.status === "FULFILLMENT"
+                        ? "bg-gray-200 text-gray-800"
+                        : batch.status === "COMPLETED"
+                        ? "bg-green-200 text-green-800"
+                        : batch.status === "CANCELLED"
+                        ? "bg-red-200 text-red-800"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                 >
                   {batch.status.replaceAll("_", " ")}
                 </span>
               </Table.Cell>
+
               <Table.Cell>
                 {new Date(batch.createdAt).toLocaleString()}
               </Table.Cell>
 
-              {/* 👇 Protect export button */}
               <Table.Cell onClick={(e) => e.stopPropagation()}>
                 <ExportExcel
                   batch={batch}
@@ -139,7 +173,7 @@ const BatchesTable = () => {
         </Table.Body>
       </Table>
 
-      {/* Pagination */}
+      {/* 🔄 Pagination */}
       <div className="flex items-center justify-center gap-4">
         <button
           className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"

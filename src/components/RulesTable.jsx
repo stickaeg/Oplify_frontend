@@ -6,10 +6,14 @@ const RulesTable = () => {
   const queryClient = useQueryClient();
 
   // Fetch rules
-  const { data: rules = [], isLoading } = useQuery({
+  const { data: rulesResponse, isLoading } = useQuery({
     queryKey: ["rules"],
     queryFn: listRules,
   });
+
+  const rules = Array.isArray(rulesResponse)
+    ? rulesResponse
+    : rulesResponse?.data || [];
 
   // Delete mutation
   const deleteMutation = useMutation({
