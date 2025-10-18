@@ -5,6 +5,7 @@ import Table from "./Table";
 import Spinner from "./Loading";
 import ExportExcel from "./ExportExcel";
 import { getBatches, getRules, updateBatchStatus } from "../api/agentsApi";
+import { useAuth } from "../context/AuthContext";
 
 const BATCH_STATUSES = [
   "PENDING",
@@ -33,7 +34,7 @@ const BatchesTable = () => {
   });
 
   const rules = rulesData?.data || [];
-
+  const { user } = useAuth();
   // Fetch batches (depends on rule filter)
   const { data, isLoading, isError } = useQuery({
     queryKey: ["batches", page, limit, selectedRule],
