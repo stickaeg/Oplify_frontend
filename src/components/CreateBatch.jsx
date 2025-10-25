@@ -49,6 +49,8 @@ const CreateBatch = ({ onClose }) => {
     setSelectedRules(selected);
   };
 
+  console.log(rules);
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -109,12 +111,16 @@ const CreateBatch = ({ onClose }) => {
                     );
                   }}
                 />
-                <span className="text-sm">
-                  {rule.name} —{" "}
+
+                <div className="text-sm">
+                  <span className="font-medium">{rule.name}</span>{" "}
                   <span className="text-gray-500">
-                    {rule.isPod ? "POD" : "Stock"}
+                    ({rule.isPod ? "POD" : "Stock"})
                   </span>
-                </span>
+                  <div className="text-xs text-gray-400">
+                    Store: {rule.store?.name || "Unknown"}
+                  </div>
+                </div>
               </label>
             ))}
           </div>

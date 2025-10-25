@@ -2,12 +2,43 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import QrScanner from "../components/QrScanner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateBatchStatus } from "../api/agentsApi";
+
+const validStatuses = [
+  "PENDING",
+  "WAITING_BATCH",
+  "BATCHED",
+  "DESIGNING",
+  "DESIGNED",
+  "PRINTING",
+  "PRINTED",
+  "CUTTING",
+  "CUT",
+  "FULFILLMENT",
+  "PACKED",
+  "COMPLETED",
+  "CANCELLED",
+];
 
 export default function FulfillmentScanner() {
   const { user, isLoading } = useAuth();
   const [order, setOrder] = useState(null);
 
-  console.log(order);
+  const queryClient = useQueryClient();
+
+  const { mutate: changeStatus, isPending } = useMutation({
+    mutationFn: ({ batchId, status }) => updateBatchStatus(batchId, status),
+    onSuccess: (data) => {
+      toast.success("Batch status updated!");
+      // optionally re-fetch or locally update UI
+      queryClient.invalidateQueries(["order", order?.id]);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to update status");
+    },
+  });
+
   if (isLoading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (user.role !== "FULLFILLMENT" && user.role !== "ADMIN") {
@@ -104,25 +135,36 @@ export default function FulfillmentScanner() {
                         className="bg-white p-3 rounded-md border shadow-sm"
                       >
                         <div className="flex justify-between items-center">
-                          <p className="font-medium">
-                            Batch Name:{" "}
-                            <span className="text-gray-600">
-                              {batch.batch?.name || "N/A"}
-                            </span>
-                          </p>
-                          <span
-                            className={`text-sm px-2 py-1 rounded-full ${
-                              batch.status === "PACKED"
-                                ? "bg-green-100 text-green-700"
-                                : batch.status === "CUT"
-                                ? "bg-blue-100 text-blue-700"
-                                : batch.status === "WAITING_BATCH"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
+                          <div>
+                            <p className="font-medium">
+                              Batch Name:{" "}
+                              <span className="text-gray-600">
+                                {batch.batch?.name || "N/A"}
+                              </span>
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Current Status: <strong>{batch.status}</strong>
+                            </p>
+                          </div>
+
+                          {/* Dropdown to change status */}
+                          <select
+                            value={batch.status}
+                            onChange={(e) =>
+                              changeStatus({
+                                batchId: batch.batch?.id,
+                                status: e.target.value,
+                              })
+                            }
+                            disabled={isPending}
+                            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:ring-2 focus:ring-teal-400"
                           >
-                            {batch.status}
-                          </span>
+                            {validStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         {/* Units */}
