@@ -110,6 +110,13 @@ const OrderDetail = () => {
                 <div className="text-right">
                   <p className="font-semibold">Qty: {item.quantity}</p>
                   <p>${item.price?.toFixed(2)}</p>
+                  <div
+                    className={`px-3 py-1 mt-2 rounded-full text-white text-xs font-semibold ${
+                      statusColors[item.status] || "bg-gray-400"
+                    }`}
+                  >
+                    {item.status}
+                  </div>
                 </div>
               </div>
 
