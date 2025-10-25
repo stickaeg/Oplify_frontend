@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import QrScanner from "../components/QrScanner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateBatchStatus } from "../api/agentsApi";
+import { itemStatusUpdate } from "../api/agentsApi";
 
 const validStatuses = [
   "PENDING",
@@ -25,17 +25,21 @@ export default function FulfillmentScanner() {
   const { user, isLoading } = useAuth();
   const [order, setOrder] = useState(null);
 
+  console.log(order);
+
   const queryClient = useQueryClient();
 
   const { mutate: changeStatus, isPending } = useMutation({
-    mutationFn: ({ batchId, status }) => updateBatchStatus(batchId, status),
+    mutationFn: ({ orderItemId, status }) =>
+      itemStatusUpdate(orderItemId, status),
     onSuccess: (data) => {
-      toast.success("Batch status updated!");
-      // optionally re-fetch or locally update UI
-      queryClient.invalidateQueries(["order", order?.id]);
+      toast.success("Item status updated!");
+      queryClient.invalidateQueries(["order", order?.id]); // re-fetch order
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || "Failed to update status");
+      toast.error(
+        err.response?.data?.message || "Failed to update item status"
+      );
     },
   });
 
@@ -149,10 +153,10 @@ export default function FulfillmentScanner() {
 
                           {/* Dropdown to change status */}
                           <select
-                            value={batch.status}
+                            value={item.status}
                             onChange={(e) =>
                               changeStatus({
-                                batchId: batch.batch?.id,
+                                orderItemId: item.id, // ✅ target the order item
                                 status: e.target.value,
                               })
                             }

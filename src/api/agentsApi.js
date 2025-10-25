@@ -57,6 +57,19 @@ export const updateBatchStatus = async (batchId, status) => {
   return res.data;
 };
 
+export const itemStatusUpdate = async (orderItemId, status) => {
+  try {
+    const response = await axiosClient.patch(
+      `/orders/orderItems/${orderItemId}/status`,
+      { status } // body payload
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error updating order item status:", error);
+    throw error.response?.data || error;
+  }
+};
+
 export const getOrderById = async (orderId) => {
   if (!orderId) throw new Error("Order ID is required");
 
