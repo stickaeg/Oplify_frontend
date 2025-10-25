@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import QrScanner from "../components/QrScanner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { itemStatusUpdate } from "../api/agentsApi";
 
 const validStatuses = [
@@ -25,20 +25,23 @@ export default function FulfillmentScanner() {
   const { user, isLoading } = useAuth();
   const [order, setOrder] = useState(null);
 
-  console.log(order);
-
-  const queryClient = useQueryClient();
-
   const { mutate: changeStatus, isPending } = useMutation({
+    // PATCH call to change status for the specific order item
     mutationFn: ({ orderItemId, status }) =>
       itemStatusUpdate(orderItemId, status),
+
+    // ✅ on success, replace the whole order with updated one
     onSuccess: (data) => {
-      toast.success("Item status updated!");
-      queryClient.invalidateQueries(["order", order?.id]); // re-fetch order
+      if (data?.order) {
+        setOrder(data.order);
+        console.log("✅ Order fully updated");
+      }
     },
+
     onError: (err) => {
-      toast.error(
-        err.response?.data?.message || "Failed to update item status"
+      console.error(
+        "❌ Failed to update item status:",
+        err.response?.data || err.message
       );
     },
   });
@@ -69,7 +72,11 @@ export default function FulfillmentScanner() {
         {/* QR Scanner */}
         <QrScanner
           onSuccess={(data) => {
-            if (data?.order) setOrder(data.order);
+            // ✅ When scanning completes, backend returns full order with all order item IDs
+            if (data?.order) {
+              setOrder(data.order);
+              console.log("📦 Scanned order loaded", data.order);
+            }
           }}
         />
 
@@ -151,12 +158,12 @@ export default function FulfillmentScanner() {
                             </p>
                           </div>
 
-                          {/* Dropdown to change status */}
+                          {/* Dropdown changes order item status directly */}
                           <select
                             value={item.status}
                             onChange={(e) =>
                               changeStatus({
-                                orderItemId: item.id, // ✅ target the order item
+                                orderItemId: item.id, // ✅ always from order item
                                 status: e.target.value,
                               })
                             }
