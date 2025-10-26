@@ -1,18 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderById } from "../api/agentsApi";
-
-const statusColors = {
-  PENDING: "bg-yellow-400", // Initial Shopify
-  WAITING_BATCH: "bg-gray-400", // Waiting for batch capacity
-  BATCHED: "bg-blue-500", // Batch full / ready
-  DESIGNING: "bg-purple-500", // Design phase
-  PRINTING: "bg-indigo-500", // Printing in progress
-  CUTTING: "bg-pink-500", // Cutting stage
-  FULFILLMENT: "bg-teal-500", // Being packed or shipped
-  COMPLETED: "bg-green-600", // Done
-  CANCELLED: "bg-red-500", // Cancelled
-};
+import getStatusClasses from "../utils/statusColors";
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -25,51 +14,113 @@ const OrderDetail = () => {
     queryFn: () => getOrderById(id),
   });
 
+  console.log(order);
+
   if (isLoading) return <p className="text-center py-10">Loading...</p>;
   if (isError)
     return (
       <p className="text-center py-10 text-red-500">Error loading order</p>
     );
 
-  console.log(order);
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       {/* ===== ORDER INFO ===== */}
-      <div className="bg-white shadow rounded p-4">
-        <h1 className="text-2xl font-bold mb-2">Order #{order.orderNumber}</h1>
-        <p>
-          <span className="font-semibold">Store:</span> {order.store?.name}
-        </p>
-        <p>
-          <span className="font-semibold">Customer:</span>{" "}
-          {order.customerName || "-"}
-        </p>
-        <p>
-          <span className="font-semibold">Email:</span>{" "}
-          {order.customerEmail || "-"}
-        </p>
-        <p>
-          <span className="font-semibold">Total:</span> $
-          {order.totalPrice?.toFixed(2) || "-"}
-        </p>
-        <p>
-          <span className="font-semibold">Status:</span>{" "}
+      <div className="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between px-6 py-5 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Order #{order.orderNumber}
+          </h1>
           <span
-            className={`font-medium ${
-              order.status === "pending"
-                ? "text-yellow-500"
-                : order.status === "fulfilled"
-                ? "text-green-500"
-                : "text-red-500"
-            }`}
+            className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
+              order.status
+            )}`}
           >
-            {order.status}
+            {order.status?.replaceAll("_", " ") || "-"}
           </span>
-        </p>
-        <p>
-          <span className="font-semibold">Created:</span>{" "}
-          {new Date(order.createdAt).toLocaleString()}
-        </p>
+        </div>
+
+        {/* Info grid */}
+        <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-8 p-6 text-sm">
+          {/* Store */}
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Store
+            </h3>
+            <p className="text-gray-900 font-medium">
+              {order.store?.name || "-"}
+            </p>
+            <p className="text-xs text-gray-500">
+              {order.store?.shopDomain || ""}
+            </p>
+          </div>
+
+          {/* Customer */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Customer
+            </h3>
+            <div>
+              <p className="text-xs text-gray-500">Name</p>
+              <p className="text-gray-900 font-medium">
+                {order.customerName || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Email</p>
+              <p className="text-sm text-gray-900">
+                {order.customerEmail || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Phone</p>
+              <p className="text-sm text-gray-900">
+                {order.customerPhone || "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Summary
+            </h3>
+            <p className="text-gray-900">
+              <span className="text-sm text-gray-600">Total:</span>{" "}
+              <span className="text-lg font-bold">
+                ${order.totalPrice?.toFixed(2) || "-"}
+              </span>
+            </p>
+            <p className="text-sm text-gray-600">
+              {new Date(order.createdAt).toLocaleString("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+          </div>
+        </div>
+
+        {/* Address section */}
+        <div className="border-t border-gray-200 bg-gray-50 px-6 py-5 grid sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Address 1
+            </p>
+            <p className="text-gray-900">{order.address1 || "—"}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Address 2
+            </p>
+            <p className="text-gray-900">{order.address2 || "—"}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Province
+            </p>
+            <p className="text-gray-900">{order.province || "—"}</p>
+          </div>
+        </div>
       </div>
 
       {/* ===== ITEMS ===== */}
@@ -111,17 +162,17 @@ const OrderDetail = () => {
                   <p className="font-semibold">Qty: {item.quantity}</p>
                   <p>${item.price?.toFixed(2)}</p>
                   <div
-                    className={`px-3 py-1 mt-2 rounded-full text-white text-xs font-semibold ${
-                      statusColors[item.status] || "bg-gray-400"
-                    }`}
+                    className={`px-3 py-1 mt-2 rounded-full text-xs font-semibold ${getStatusClasses(
+                      item.status
+                    )}`}
                   >
-                    {item.status}
+                    {item.status?.replaceAll("_", " ")}
                   </div>
                 </div>
               </div>
 
               {/* ===== Batch List ===== */}
-              {item.batches && item.batches.length > 0 && (
+              {item.BatchItem?.length > 0 && (
                 <div className="mt-4 border-t pt-3">
                   <p className="font-medium text-sm mb-2 text-gray-700">
                     Batches:
@@ -134,9 +185,9 @@ const OrderDetail = () => {
                       >
                         <span className="font-semibold">{b.batch.name}</span>
                         <span
-                          className={`px-3 py-1 rounded-full text-white text-xs font-semibold ${
-                            statusColors[b.status] || "bg-gray-400"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
+                            b.status
+                          )}`}
                         >
                           {b.status.replaceAll("_", " ")}
                         </span>
@@ -148,9 +199,9 @@ const OrderDetail = () => {
                   <p className="text-xs text-gray-600 mt-3">
                     Overall:{" "}
                     <span
-                      className={`font-semibold ${
-                        statusColors[item.overallStatus] || "bg-gray-400"
-                      } text-white px-2 py-0.5 rounded`}
+                      className={`font-semibold px-2 py-0.5 rounded text-xs ${getStatusClasses(
+                        item.overallStatus
+                      )}`}
                     >
                       {item.overallStatus.replaceAll("_", " ")}
                     </span>

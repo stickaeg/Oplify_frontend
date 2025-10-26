@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { getOrders, getStores } from "../api/agentsApi";
 import Table from "./Table";
 import Spinner from "./Loading";
+import getStatusClasses from "../utils/statusColors";
 
 const OrdersTable = () => {
   const [page, setPage] = useState(1);
@@ -32,13 +33,17 @@ const OrdersTable = () => {
   });
 
   // ===== Fetch Orders =====
-  const {
-    data,
-    isLoading,
-    isError,
-    isFetching,
-  } = useQuery({
-    queryKey: ["orders", page, limit, storeId, status, debouncedSearch, startDate, endDate],
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: [
+      "orders",
+      page,
+      limit,
+      storeId,
+      status,
+      debouncedSearch,
+      startDate,
+      endDate,
+    ],
     queryFn: () =>
       getOrders({
         page,
@@ -68,7 +73,9 @@ const OrdersTable = () => {
       <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         {/* Store Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Store
+          </label>
           <select
             value={storeId}
             onChange={(e) => {
@@ -88,7 +95,9 @@ const OrdersTable = () => {
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
           <select
             value={status}
             onChange={(e) => {
@@ -133,7 +142,9 @@ const OrdersTable = () => {
 
         {/* Date Range Filters */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Start Date
+          </label>
           <input
             type="date"
             value={startDate}
@@ -146,7 +157,9 @@ const OrdersTable = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            End Date
+          </label>
           <input
             type="date"
             value={endDate}
@@ -185,7 +198,15 @@ const OrdersTable = () => {
                 <Table.Cell>#{order.orderNumber}</Table.Cell>
                 <Table.Cell>{order.store?.name || "—"}</Table.Cell>
                 <Table.Cell>EGP {order.totalPrice?.toFixed(2) || 0}</Table.Cell>
-                <Table.Cell>{order.status || "-"}</Table.Cell>
+                <Table.Cell>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
+                      order.status
+                    )}`}
+                  >
+                    {order.status || "-"}
+                  </span>
+                </Table.Cell>{" "}
                 <Table.Cell>
                   {new Date(order.createdAt).toLocaleString()}
                 </Table.Cell>

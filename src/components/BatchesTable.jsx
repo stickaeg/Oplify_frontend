@@ -5,35 +5,22 @@ import Table from "./Table";
 import Spinner from "./Loading";
 import ExportExcel from "./ExportExcel";
 import { getBatches, getRules, updateBatchStatus } from "../api/agentsApi";
-
-const BATCH_STATUSES = [
-  "PENDING",
-  "WAITING_BATCH",
-  "BATCHED",
-  "DESIGNING",
-  "DESIGNED",
-  "PRINTING",
-  "CUTTING",
-  "FULFILLMENT",
-  "COMPLETED",
-  "CANCELLED",
-];
+import getStatusClasses from "../utils/statusColors"; // ✅ shared color logic
 
 const BatchesTable = () => {
   const [page, setPage] = useState(1);
-  const [selectedRule, setSelectedRule] = useState(""); // 👈 for filtering by rule name
+  const [selectedRule, setSelectedRule] = useState("");
   const limit = 10;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Fetch rules for dropdown
   const { data: rulesData, isLoading: rulesLoading } = useQuery({
     queryKey: ["rules"],
     queryFn: getRules,
   });
 
   const rules = rulesData?.data || [];
-  // Fetch batches (depends on rule filter)
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["batches", page, limit, selectedRule],
     queryFn: () => getBatches({ page, limit, ruleName: selectedRule }),
@@ -61,7 +48,6 @@ const BatchesTable = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Batches</h2>
 
-        {/* 🔽 Filter by Rule Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Filter by Rule
@@ -85,7 +71,6 @@ const BatchesTable = () => {
         </div>
       </div>
 
-      {/* 🧾 Table */}
       <Table>
         <Table.Head>
           <Table.HeaderCell>Name</Table.HeaderCell>
@@ -104,7 +89,6 @@ const BatchesTable = () => {
             >
               <Table.Cell>{batch.name}</Table.Cell>
 
-              {/* Capacity */}
               <Table.Cell>
                 <div className="flex items-center gap-2">
                   <div className="w-32 h-4 bg-gray-200 rounded overflow-hidden">
@@ -125,33 +109,11 @@ const BatchesTable = () => {
                 </div>
               </Table.Cell>
 
-              {/* Status Badge */}
               <Table.Cell>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold
-                    ${
-                      batch.status === "PENDING"
-                        ? "bg-yellow-200 text-yellow-800"
-                        : batch.status === "WAITING_BATCH"
-                        ? "bg-orange-200 text-orange-800"
-                        : batch.status === "BATCHED"
-                        ? "bg-blue-200 text-blue-800"
-                        : batch.status === "DESIGNING"
-                        ? "bg-purple-200 text-purple-800"
-                        : batch.status === "DESIGNED"
-                        ? "bg-indigo-200 text-violet-800"
-                        : batch.status === "PRINTING"
-                        ? "bg-teal-200 text-teal-800"
-                        : batch.status === "CUTTING"
-                        ? "bg-pink-200 text-pink-800"
-                        : batch.status === "FULFILLMENT"
-                        ? "bg-gray-200 text-gray-800"
-                        : batch.status === "COMPLETED"
-                        ? "bg-green-200 text-green-800"
-                        : batch.status === "CANCELLED"
-                        ? "bg-red-200 text-red-800"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
+                    batch.status
+                  )}`}
                 >
                   {batch.status.replaceAll("_", " ")}
                 </span>
@@ -172,7 +134,6 @@ const BatchesTable = () => {
         </Table.Body>
       </Table>
 
-      {/* 🔄 Pagination */}
       <div className="flex items-center justify-center gap-4">
         <button
           className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
