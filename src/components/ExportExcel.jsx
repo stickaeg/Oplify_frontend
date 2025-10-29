@@ -18,29 +18,10 @@ const ExportExcel = ({ batch, disabled }) => {
     },
   });
 
-  const fetchImageAsBase64 = async (url) => {
-    try {
-      if (url.startsWith("data:image")) {
-        return url;
-      }
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Failed to fetch image:", error);
-      return null;
-    }
-  };
-
   const exportToExcel = async () => {
     if (disabled) return;
 
-    // ✅ If user is DESIGNER, update status before exporting
+    // ✅ Update status if designer
     if (user?.role === "DESIGNER" && batch.status === "BATCHED") {
       changeStatus({ batchId: batch.id, status: "DESIGNING" });
     }
@@ -48,40 +29,32 @@ const ExportExcel = ({ batch, disabled }) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Items");
 
-    // ===== Batch Title =====
-    worksheet.mergeCells("A1:E1");
-    const titleRow = worksheet.getCell("A1");
-    titleRow.value = `Batch: ${batch.name}`;
-    titleRow.font = { size: 16, bold: true };
-    titleRow.alignment = { vertical: "middle", horizontal: "center" };
-    worksheet.getRow(1).height = 30;
-
     // ===== Table Header =====
-    worksheet.getRow(3).values = [
+    worksheet.getRow(1).values = [
       "Title",
       "Store Name",
       "SKU",
       "Order Number",
-      "Unit QR Code",
+      "Unit QR Code (URL)",
     ];
 
-    worksheet.getRow(3).font = { bold: true };
-    worksheet.getRow(3).fill = {
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FFE0E0E0" },
     };
 
     worksheet.columns = [
-      { width: 30 }, // Title
-      { width: 20 }, // Store Name
-      { width: 15 }, // SKU
-      { width: 18 }, // Order Number
-      { width: 20 }, // Unit QR
+      { width: 30 },
+      { width: 20 },
+      { width: 15 },
+      { width: 18 },
+      { width: 45 },
     ];
 
     // ===== Add Item Rows =====
-    let currentRow = 4;
+    let currentRow = 2;
     const orderCounters = {};
 
     for (const item of batch.items) {
@@ -98,29 +71,24 @@ const ExportExcel = ({ batch, disabled }) => {
           item.storeName,
           item.sku,
           `${item.orderNumber} - ${unitNumber}`,
-          "",
+          "", // Placeholder for QR URL link
         ]);
-        row.height = 80;
 
+        // Add QR code as hyperlink (not image)
         if (unit.qrCodeUrl) {
-          const unitQRBase64 = await fetchImageAsBase64(unit.qrCodeUrl);
-          if (unitQRBase64) {
-            const unitImageId = workbook.addImage({
-              base64: unitQRBase64,
-              extension: "png",
-            });
-            worksheet.addImage(unitImageId, {
-              tl: { col: 4, row: currentRow - 1 },
-              ext: { width: 80, height: 80 },
-            });
-          }
+          const cell = worksheet.getCell(`E${currentRow}`);
+          cell.value = {
+            text: unit.qrCodeUrl,
+            hyperlink: unit.qrCodeUrl,
+          };
+          cell.font = { color: { argb: "FF0000FF" }, underline: true };
         }
 
         currentRow++;
       }
     }
 
-    // ===== Add Batch QR Code at End =====
+    // ===== Add Batch QR Code (as link) at the Bottom =====
     if (batch.qrCodeUrl) {
       currentRow += 2;
 
@@ -129,21 +97,15 @@ const ExportExcel = ({ batch, disabled }) => {
       qrTitle.value = "Batch QR Code";
       qrTitle.font = { bold: true, size: 14 };
       qrTitle.alignment = { horizontal: "center", vertical: "middle" };
-      worksheet.getRow(currentRow).height = 25;
 
-      const batchQRBase64 = await fetchImageAsBase64(batch.qrCodeUrl);
-      if (batchQRBase64) {
-        const batchImageId = workbook.addImage({
-          base64: batchQRBase64,
-          extension: "png",
-        });
-
-        worksheet.addImage(batchImageId, {
-          tl: { col: 2, row: currentRow },
-          ext: { width: 120, height: 120 },
-        });
-        worksheet.getRow(currentRow + 1).height = 100;
-      }
+      worksheet.mergeCells(`A${currentRow + 1}:E${currentRow + 1}`);
+      const qrLinkCell = worksheet.getCell(`A${currentRow + 1}`);
+      qrLinkCell.value = {
+        text: batch.qrCodeUrl,
+        hyperlink: batch.qrCodeUrl,
+      };
+      qrLinkCell.font = { color: { argb: "FF0000FF" }, underline: true };
+      qrLinkCell.alignment = { horizontal: "center", vertical: "middle" };
     }
 
     // ===== Save Excel File =====
