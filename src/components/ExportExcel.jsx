@@ -10,18 +10,14 @@ const ExportExcel = ({ batch, disabled }) => {
 
   const { mutate: changeStatus } = useMutation({
     mutationFn: ({ batchId, status }) => updateBatchStatus(batchId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["batches"]);
-    },
-    onError: (err) => {
-      console.error("Failed to update batch status:", err);
-    },
+    onSuccess: () => queryClient.invalidateQueries(["batches"]),
+    onError: (err) => console.error("Failed to update batch status:", err),
   });
 
   const exportToExcel = async () => {
     if (disabled) return;
 
-    // ✅ Update status if designer
+    // If designer, auto-update batch status
     if (user?.role === "DESIGNER" && batch.status === "BATCHED") {
       changeStatus({ batchId: batch.id, status: "DESIGNING" });
     }
@@ -29,92 +25,81 @@ const ExportExcel = ({ batch, disabled }) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Items");
 
-    // ===== Table Header =====
-    worksheet.getRow(1).values = [
+    // ===== HEADER ROW =====
+    worksheet.addRow([
       "Title",
       "Store Name",
       "SKU",
       "Order Number",
       "Unit QR Code (URL)",
-    ];
+      "Batch QR (URL)",
+    ]);
 
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FFE0E0E0" },
     };
+    headerRow.alignment = { horizontal: "center", vertical: "middle" };
 
-    worksheet.columns = [
-      { width: 30 },
-      { width: 20 },
-      { width: 15 },
-      { width: 18 },
-      { width: 45 },
-    ];
+    // ===== COLUMN WIDTHS =====
+    const widths = [30, 20, 15, 18, 45, 45];
+    widths.forEach((w, i) => (worksheet.getColumn(i + 1).width = w));
 
-    // ===== Add Item Rows =====
-    let currentRow = 2;
+    // ===== ADD ITEM ROWS =====
     const orderCounters = {};
+    let isFirstBatchQR = true;
 
-    for (const item of batch.items) {
+    for (const item of batch.items || []) {
       if (!orderCounters[item.orderNumber]) {
         orderCounters[item.orderNumber] = 0;
       }
 
-      for (const unit of item.units) {
+      for (const unit of item.units || []) {
         orderCounters[item.orderNumber]++;
         const unitNumber = orderCounters[item.orderNumber];
 
         const row = worksheet.addRow([
-          item.productTitle,
-          item.storeName,
-          item.sku,
+          item.productTitle || "",
+          item.storeName || "",
+          item.sku || "",
           `${item.orderNumber} - ${unitNumber}`,
-          "", // Placeholder for QR URL link
+          "", // Unit QR placeholder
+          "", // Batch QR placeholder
         ]);
 
-        // Add QR code as hyperlink (not image)
+        // ===== Add Unit QR hyperlink (col E)
         if (unit.qrCodeUrl) {
-          const cell = worksheet.getCell(`E${currentRow}`);
-          cell.value = {
+          const unitQRCell = row.getCell(5);
+          unitQRCell.value = {
             text: unit.qrCodeUrl,
             hyperlink: unit.qrCodeUrl,
           };
-          cell.font = { color: { argb: "FF0000FF" }, underline: true };
+          unitQRCell.font = { color: { argb: "FF0000FF" }, underline: true };
         }
 
-        currentRow++;
+        // ===== Add Batch QR hyperlink ONLY for first row =====
+        if (batch.qrCodeUrl && isFirstBatchQR) {
+          const batchQRCell = row.getCell(6);
+          batchQRCell.value = {
+            text: batch.qrCodeUrl,
+            hyperlink: batch.qrCodeUrl,
+          };
+          batchQRCell.font = { color: { argb: "FF0000FF" }, underline: true };
+          isFirstBatchQR = false; // disable for next rows
+        }
       }
     }
 
-    // ===== Add Batch QR Code (as link) at the Bottom =====
-    if (batch.qrCodeUrl) {
-      currentRow += 2;
-
-      worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
-      const qrTitle = worksheet.getCell(`A${currentRow}`);
-      qrTitle.value = "Batch QR Code";
-      qrTitle.font = { bold: true, size: 14 };
-      qrTitle.alignment = { horizontal: "center", vertical: "middle" };
-
-      worksheet.mergeCells(`A${currentRow + 1}:E${currentRow + 1}`);
-      const qrLinkCell = worksheet.getCell(`A${currentRow + 1}`);
-      qrLinkCell.value = {
-        text: batch.qrCodeUrl,
-        hyperlink: batch.qrCodeUrl,
-      };
-      qrLinkCell.font = { color: { argb: "FF0000FF" }, underline: true };
-      qrLinkCell.alignment = { horizontal: "center", vertical: "middle" };
-    }
-
-    // ===== Save Excel File =====
+    // ===== SAVE FILE =====
     const buffer = await workbook.xlsx.writeBuffer();
-    const file = new Blob([buffer], {
+    const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
-    saveAs(file, `${batch.name}_items.xlsx`);
+    saveAs(blob, `${batch.name}_items.xlsx`);
   };
 
   return (
