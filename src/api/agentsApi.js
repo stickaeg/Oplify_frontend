@@ -57,11 +57,11 @@ export const updateBatchStatus = async (batchId, status) => {
   return res.data;
 };
 
-export const itemStatusUpdate = async (orderItemId, status) => {
+export const itemStatusUpdate = async (orderItemId, status, unitId = null) => {
   try {
     const response = await axiosClient.patch(
       `/orders/orderItems/${orderItemId}/status`,
-      { status } // body payload
+      { status, unitId } // ✅ Pass unitId if updating single unit
     );
     return response.data;
   } catch (error) {
@@ -69,7 +69,6 @@ export const itemStatusUpdate = async (orderItemId, status) => {
     throw error.response?.data || error;
   }
 };
-
 export const getOrderById = async (orderId) => {
   if (!orderId) throw new Error("Order ID is required");
 

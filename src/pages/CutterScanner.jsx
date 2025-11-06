@@ -20,16 +20,8 @@ export default function CutterScanner() {
             ✂️ Cutter Scanner
           </h1>
           <p className="text-pink-700">
-            Scan <strong>each individual sticker</strong> QR code after cutting
+            Scan <strong>Qr Batch </strong>
           </p>
-          <div className="mt-3 bg-white rounded p-3 text-sm space-y-1">
-            <p className="text-gray-700">
-              ✅ Each scan marks one item as <strong>CUT</strong>
-            </p>
-            <p className="text-gray-700">
-              📦 When all items cut → Batch status = <strong>CUT</strong>
-            </p>
-          </div>
         </div>
         <QRScanner />
       </div>

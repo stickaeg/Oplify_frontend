@@ -36,6 +36,7 @@ export default function BatchesDetail() {
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // === Fetch batch ===
   const {
@@ -100,6 +101,21 @@ export default function BatchesDetail() {
       }
     } catch (error) {
       console.error("Download failed:", error);
+    }
+  };
+
+  const handleStatusUpdate = async (newStatus) => {
+    setIsUpdatingStatus(true);
+    try {
+      await updateBatchStatus(batch.id, newStatus);
+      queryClient.invalidateQueries(["batch", batch.id]);
+      queryClient.invalidateQueries(["batches"]);
+      console.log(`Batch ${batch.id} status changed to ${newStatus}`);
+    } catch (error) {
+      console.error("Status update failed:", error);
+      alert("Failed to update batch status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -267,7 +283,18 @@ export default function BatchesDetail() {
       </div>
 
       {user?.role === "PRINTER" && (
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-3 mb-4">
+          <button
+            onClick={() => handleStatusUpdate("REDESIGN")}
+            disabled={isUpdatingStatus}
+            className={`text-white px-4 py-2 rounded-lg transition font-medium ${
+              isUpdatingStatus
+                ? "bg-gray-400 cursor-not-allowed opacity-60"
+                : "bg-orange-600 hover:bg-orange-700"
+            }`}
+          >
+            {isUpdatingStatus ? "Updating..." : "Request Redesign"}
+          </button>
           <button
             onClick={() => navigate("/scan/printer")}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition"
@@ -276,8 +303,20 @@ export default function BatchesDetail() {
           </button>
         </div>
       )}
+
       {user?.role === "CUTTER" && (
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-3 mb-4">
+          <button
+            onClick={() => handleStatusUpdate("REPRINT")}
+            disabled={isUpdatingStatus}
+            className={`text-white px-4 py-2 rounded-lg transition font-medium ${
+              isUpdatingStatus
+                ? "bg-gray-400 cursor-not-allowed opacity-60"
+                : "bg-rose-600 hover:bg-rose-700"
+            }`}
+          >
+            {isUpdatingStatus ? "Updating..." : "Request Reprint"}
+          </button>
           <button
             onClick={() => navigate("/scan/cutter")}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition"
@@ -286,7 +325,6 @@ export default function BatchesDetail() {
           </button>
         </div>
       )}
-
       {/* ===== Batch Items (Card Style) ===== */}
       <div className="bg-white shadow rounded p-4">
         <h2 className="text-xl font-semibold mb-4">Batch Items</h2>

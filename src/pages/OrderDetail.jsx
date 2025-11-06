@@ -1,10 +1,13 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getOrderById } from "../api/agentsApi";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getOrderById, itemStatusUpdate } from "../api/agentsApi";
 import getStatusClasses from "../utils/statusColors";
+import { useAuth } from "../context/AuthContext";
 
 const OrderDetail = () => {
   const { id } = useParams();
+  const queryClient = useQueryClient();
+
   const {
     data: order,
     isLoading,
@@ -14,13 +17,50 @@ const OrderDetail = () => {
     queryFn: () => getOrderById(id),
   });
 
-  console.log(order);
+  // ✅ Mutation to update item status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ orderItemId, status }) =>
+      itemStatusUpdate(orderItemId, status),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["order", id], data.order);
+    },
+    onError: (error) => {
+      console.error("Failed to update status:", error);
+      alert("Failed to update status");
+    },
+  });
+
+  const handleStatusChange = (orderItemId, newStatus, unitId = null) => {
+    updateStatusMutation.mutate({
+      orderItemId,
+      status: newStatus,
+      unitId, // ✅ Pass unitId for single unit updates
+    });
+  };
 
   if (isLoading) return <p className="text-center py-10">Loading...</p>;
   if (isError)
     return (
       <p className="text-center py-10 text-red-500">Error loading order</p>
     );
+
+  const validStatuses = [
+    "PENDING",
+    "WAITING_BATCH",
+    "BATCHED",
+    "DESIGNING",
+    "DESIGNED",
+    "PRINTING",
+    "PRINTED",
+    "CUTTING",
+    "CUT",
+    "FULFILLMENT",
+    "PACKED",
+    "COMPLETED",
+    "CANCELLED",
+  ];
+
+  const { user } = useAuth();
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -158,16 +198,39 @@ const OrderDetail = () => {
                     {item.product?.isPod ? "POD" : "Stock"}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-2">
                   <p className="font-semibold">Qty: {item.quantity}</p>
                   <p>${item.price?.toFixed(2)}</p>
-                  <div
-                    className={`px-3 py-1 mt-2 rounded-full text-xs font-semibold ${getStatusClasses(
-                      item.status
-                    )}`}
-                  >
-                    {item.status?.replaceAll("_", " ")}
-                  </div>
+
+                  {/* ✅ Status Dropdown */}
+                  {user?.role === "ADMIN" || user?.role === "FULFILLMENT" ? (
+                    <select
+                      value={item.status}
+                      onChange={(e) =>
+                        handleStatusChange(item.id, e.target.value)
+                      }
+                      disabled={updateStatusMutation.isPending}
+                      className={`px-3 py-1 rounded-md text-xs font-medium uppercase border ${
+                        updateStatusMutation.isPending
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                    >
+                      {validStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status.replaceAll("_", " ")}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
+                        item.status
+                      )}`}
+                    >
+                      {item.status?.replaceAll("_", " ")}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -194,18 +257,6 @@ const OrderDetail = () => {
                       </div>
                     ))}
                   </div>
-
-                  {/* Overall Item Status */}
-                  <p className="text-xs text-gray-600 mt-3">
-                    Overall:{" "}
-                    <span
-                      className={`font-semibold px-2 py-0.5 rounded text-xs ${getStatusClasses(
-                        item.overallStatus
-                      )}`}
-                    >
-                      {item.overallStatus.replaceAll("_", " ")}
-                    </span>
-                  </p>
                 </div>
               )}
             </div>
