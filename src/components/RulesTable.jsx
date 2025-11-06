@@ -10,7 +10,7 @@ const RulesTable = () => {
     queryKey: ["rules"],
     queryFn: listRules,
   });
-
+  console.log(rulesResponse);
   const rules = Array.isArray(rulesResponse)
     ? rulesResponse
     : rulesResponse?.data || [];
@@ -38,6 +38,7 @@ const RulesTable = () => {
       <Table>
         <Table.Head>
           <Table.HeaderCell>Rule Name</Table.HeaderCell>
+          <Table.HeaderCell>Store Name</Table.HeaderCell>
           <Table.HeaderCell>Rule Type</Table.HeaderCell>
           <Table.HeaderCell>Actions</Table.HeaderCell>
         </Table.Head>
@@ -45,6 +46,7 @@ const RulesTable = () => {
           {rules.map((rule) => (
             <Table.Row key={rule.id}>
               <Table.Cell>{rule.name}</Table.Cell>
+              <Table.Cell>{rule.store?.name}</Table.Cell>
               <Table.Cell>{rule.isPod ? "POD" : "Stock"}</Table.Cell>
               <Table.Cell>
                 <button
