@@ -1,12 +1,20 @@
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getOrderById, itemStatusUpdate } from "../api/agentsApi";
+import { getOrderById, itemStatusUpdate, replacement } from "../api/agentsApi";
 import getStatusClasses from "../utils/statusColors";
 import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import { IoMdArrowDropdown, IoMdArrowDropright } from "react-icons/io";
+import { MdRefresh } from "react-icons/md";
 
 const OrderDetail = () => {
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // ✅ Track selected units per order item
+  const [selectedUnits, setSelectedUnits] = useState({});
+  const [expandedItems, setExpandedItems] = useState({});
 
   const {
     data: order,
@@ -19,10 +27,11 @@ const OrderDetail = () => {
 
   // ✅ Mutation to update item status
   const updateStatusMutation = useMutation({
-    mutationFn: ({ orderItemId, status }) =>
-      itemStatusUpdate(orderItemId, status),
-    onSuccess: (data) => {
-      queryClient.setQueryData(["order", id], data.order);
+    mutationFn: ({ orderItemId, status, unitIds }) =>
+      itemStatusUpdate(orderItemId, status, unitIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order", id] });
+      setSelectedUnits({});
     },
     onError: (error) => {
       console.error("Failed to update status:", error);
@@ -30,12 +39,76 @@ const OrderDetail = () => {
     },
   });
 
-  const handleStatusChange = (orderItemId, newStatus, unitId = null) => {
+  // ✅ Mutation for replacement (redesign/reprint)
+  const replacementMutation = useMutation({
+    mutationFn: ({ unitId, reason }) => replacement(unitId, reason),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["order", id] });
+      alert(
+        `✅ Replacement created: ${data.reason}\nNew Unit ID: ${data.newUnitId}\nNew Batch: ${data.newBatch.name}`
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to create replacement:", error);
+      alert("Failed to create replacement unit");
+    },
+  });
+
+  const handleStatusChange = (orderItemId, newStatus, unitIds = null) => {
     updateStatusMutation.mutate({
       orderItemId,
       status: newStatus,
-      unitId, // ✅ Pass unitId for single unit updates
+      unitIds,
     });
+  };
+
+  // ✅ Handle replacement (redesign/reprint)
+  const handleReplacement = (unitId, reason) => {
+    if (
+      !confirm(
+        `Create a replacement unit for ${reason}?\n\nThe current unit will be marked as CANCELLED and a new unit will be created in a new batch.`
+      )
+    ) {
+      return;
+    }
+
+    replacementMutation.mutate({ unitId, reason });
+  };
+
+  // ✅ Toggle unit selection
+  const toggleUnitSelection = (itemId, unitId) => {
+    setSelectedUnits((prev) => {
+      const itemUnits = prev[itemId] || [];
+      const isSelected = itemUnits.includes(unitId);
+
+      return {
+        ...prev,
+        [itemId]: isSelected
+          ? itemUnits.filter((id) => id !== unitId)
+          : [...itemUnits, unitId],
+      };
+    });
+  };
+
+  // ✅ Select all units for an item
+  const toggleAllUnits = (itemId, allUnitIds) => {
+    setSelectedUnits((prev) => {
+      const itemUnits = prev[itemId] || [];
+      const allSelected = allUnitIds.every((id) => itemUnits.includes(id));
+
+      return {
+        ...prev,
+        [itemId]: allSelected ? [] : allUnitIds,
+      };
+    });
+  };
+
+  // ✅ Toggle expanded view
+  const toggleExpanded = (itemId) => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
   };
 
   if (isLoading) return <p className="text-center py-10">Loading...</p>;
@@ -60,7 +133,8 @@ const OrderDetail = () => {
     "CANCELLED",
   ];
 
-  const { user } = useAuth();
+  const canEditStatus = user?.role === "ADMIN" || user?.role === "FULFILLMENT";
+  const canReplace = ["ADMIN", "DESIGNER", "PRINTER"].includes(user?.role);
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -128,7 +202,7 @@ const OrderDetail = () => {
             <p className="text-gray-900">
               <span className="text-sm text-gray-600">Total:</span>{" "}
               <span className="text-lg font-bold">
-                ${order.totalPrice?.toFixed(2) || "-"}
+                EGP {order.totalPrice?.toFixed(2) || "-"}
               </span>
             </p>
             <p className="text-sm text-gray-600">
@@ -167,100 +241,302 @@ const OrderDetail = () => {
       <div className="bg-white shadow rounded p-4 overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Order Items</h2>
         <div className="space-y-4">
-          {order.items.map((item) => (
-            <div
-              key={item.id}
-              className="border border-gray-200 rounded-lg p-4 shadow-sm"
-            >
-              <div className="flex items-center gap-4">
-                {item.product?.imgUrl && (
-                  <img
-                    src={item.product.imgUrl}
-                    alt={item.product.title}
-                    className="w-16 h-16 object-contain rounded"
-                  />
-                )}
-                <div className="flex-1">
-                  <p className="font-semibold text-lg">
-                    {item.product?.title || "—"}
-                  </p>
-                  <p className="text-gray-600 text-sm">
-                    {item.variant?.sku || "-"}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Type: {item.product?.productType || "-"}
-                  </p>
-                  <p
-                    className={`text-sm font-semibold ${
-                      item.product?.isPod ? "text-green-500" : "text-blue-500"
-                    }`}
-                  >
-                    {item.product?.isPod ? "POD" : "Stock"}
-                  </p>
-                </div>
-                <div className="text-right space-y-2">
-                  <p className="font-semibold">Qty: {item.quantity}</p>
-                  <p>${item.price?.toFixed(2)}</p>
+          {order.items.map((item) => {
+            const allUnits = item.BatchItem?.flatMap((bi) => bi.units) || [];
+            const selectedItemUnits = selectedUnits[item.id] || [];
+            const isExpanded = expandedItems[item.id];
 
-                  {/* ✅ Status Dropdown */}
-                  {user?.role === "ADMIN" || user?.role === "FULFILLMENT" ? (
-                    <select
-                      value={item.status}
-                      onChange={(e) =>
-                        handleStatusChange(item.id, e.target.value)
-                      }
-                      disabled={updateStatusMutation.isPending}
-                      className={`px-3 py-1 rounded-md text-xs font-medium uppercase border ${
-                        updateStatusMutation.isPending
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
+            // ✅ Calculate status breakdown (exclude cancelled from display)
+            const activeUnits = allUnits.filter(
+              (u) => u.status !== "CANCELLED"
+            );
+            const cancelledUnits = allUnits.filter(
+              (u) => u.status === "CANCELLED"
+            );
+
+            const statusBreakdown = activeUnits.reduce((acc, unit) => {
+              acc[unit.status] = (acc[unit.status] || 0) + 1;
+              return acc;
+            }, {});
+
+            return (
+              <div
+                key={item.id}
+                className="border border-gray-200 rounded-lg p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-4">
+                  {item.product?.imgUrl && (
+                    <img
+                      src={item.product.imgUrl}
+                      alt={item.product.title}
+                      className="w-16 h-16 object-contain rounded"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold text-lg">
+                      {item.product?.title || "—"}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      {item.variant?.sku || "-"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Type: {item.product?.productType || "-"}
+                    </p>
+                    <p
+                      className={`text-sm font-semibold ${
+                        item.product?.isPod ? "text-green-500" : "text-blue-500"
                       }`}
                     >
-                      {validStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status.replaceAll("_", " ")}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span
-                      className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
-                        item.status
-                      )}`}
-                    >
-                      {item.status?.replaceAll("_", " ")}
-                    </span>
-                  )}
-                </div>
-              </div>
+                      {item.product?.isPod ? "POD" : "Stock"}
+                    </p>
 
-              {/* ===== Batch List ===== */}
-              {item.BatchItem?.length > 0 && (
-                <div className="mt-4 border-t pt-3">
-                  <p className="font-medium text-sm mb-2 text-gray-700">
-                    Batches:
-                  </p>
-                  <div className="space-y-2">
-                    {item.BatchItem.map((b) => (
-                      <div
-                        key={b.batchId}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <span className="font-semibold">{b.batch.name}</span>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
-                            b.status
-                          )}`}
-                        >
-                          {b.status.replaceAll("_", " ")}
-                        </span>
+                    {/* ✅ Status breakdown display */}
+                    {activeUnits.length > 0 && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        {Object.entries(statusBreakdown).map(
+                          ([status, count]) => (
+                            <span key={status} className="mr-3">
+                              <span
+                                className={`font-semibold ${getStatusClasses(
+                                  status
+                                )}`}
+                              >
+                                <span className="p-1 rounded">{count}</span>
+                              </span>{" "}
+                              {status.replaceAll("_", " ")}
+                            </span>
+                          )
+                        )}
+                        {cancelledUnits.length > 0 && (
+                          <span className="text-red-500 font-semibold">
+                            ({cancelledUnits.length} cancelled)
+                          </span>
+                        )}
                       </div>
-                    ))}
+                    )}
+                  </div>
+                  <div className="text-right space-y-2">
+                    <p className="font-semibold">Qty: {item.quantity}</p>
+                    <p>EGP {item.price?.toFixed(2)}</p>
+
+                    {/* ✅ Bulk status dropdown (updates all units) */}
+                    {canEditStatus ? (
+                      <select
+                        value={item.status}
+                        onChange={(e) =>
+                          handleStatusChange(item.id, e.target.value)
+                        }
+                        disabled={updateStatusMutation.isPending}
+                        className={`px-3 py-1 rounded-md text-xs font-medium uppercase border ${
+                          updateStatusMutation.isPending
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer"
+                        }`}
+                      >
+                        {validStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status.replaceAll("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
+                          item.status
+                        )}`}
+                      >
+                        {item.status?.replaceAll("_", " ")}
+                      </span>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* ===== Unit-Level Controls ===== */}
+                {canEditStatus && allUnits.length > 0 && (
+                  <div className="mt-4 border-t border-gray-300 pt-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <button
+                        onClick={() => toggleExpanded(item.id)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center"
+                      >
+                        <span>
+                          {isExpanded ? (
+                            <IoMdArrowDropdown size={19} />
+                          ) : (
+                            <IoMdArrowDropright size={19} />
+                          )}{" "}
+                        </span>
+                        Manage Individual Units ({activeUnits.length} active
+                        {cancelledUnits.length > 0 &&
+                          `, ${cancelledUnits.length} cancelled`}
+                        )
+                      </button>
+
+                      {isExpanded && (
+                        <button
+                          onClick={() =>
+                            toggleAllUnits(
+                              item.id,
+                              activeUnits.map((u) => u.id)
+                            )
+                          }
+                          className="text-xs text-gray-600 hover:text-gray-800"
+                        >
+                          {selectedItemUnits.length === activeUnits.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </button>
+                      )}
+                    </div>
+
+                    {isExpanded && (
+                      <>
+                        {/* ✅ Unit checkboxes with replacement buttons */}
+                        <div className="grid grid-cols-1 gap-2 mb-3 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
+                          {allUnits.map((unit, idx) => (
+                            <div
+                              key={unit.id}
+                              className={`flex items-center justify-between p-2 rounded ${
+                                unit.status === "CANCELLED"
+                                  ? "bg-red-50 opacity-60"
+                                  : "hover:bg-gray-100"
+                              }`}
+                            >
+                              <label className="flex items-center gap-2 text-sm cursor-pointer flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedItemUnits.includes(unit.id)}
+                                  onChange={() =>
+                                    toggleUnitSelection(item.id, unit.id)
+                                  }
+                                  disabled={unit.status === "CANCELLED"}
+                                  className="rounded"
+                                />
+                                <span className="font-medium">
+                                  Unit #{idx + 1}
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded ${getStatusClasses(
+                                    unit.status
+                                  )}`}
+                                >
+                                  {unit.status.replaceAll("_", " ")}
+                                </span>
+                              </label>
+
+                              {/* ✅ Replacement buttons (only for non-cancelled units) */}
+                              {canReplace && unit.status !== "CANCELLED" && (
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() =>
+                                      handleReplacement(unit.id, "REDESIGN")
+                                    }
+                                    disabled={replacementMutation.isPending}
+                                    className="flex items-center gap-1 text-xs px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Create replacement for redesign"
+                                  >
+                                    <MdRefresh size={14} />
+                                    Redesign
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleReplacement(unit.id, "REPRINT")
+                                    }
+                                    disabled={replacementMutation.isPending}
+                                    className="flex items-center gap-1 text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Create replacement for reprint"
+                                  >
+                                    <MdRefresh size={14} />
+                                    Reprint
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* ✅ Show if cancelled */}
+                              {unit.status === "CANCELLED" && (
+                                <span className="text-xs text-red-600 italic">
+                                  Replaced
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* ✅ Update selected units */}
+                        {selectedItemUnits.length > 0 && (
+                          <div className="flex items-center gap-2 bg-blue-50 p-2 rounded">
+                            <span className="text-sm font-medium">
+                              Update {selectedItemUnits.length} selected unit(s)
+                              to:
+                            </span>
+                            <select
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleStatusChange(
+                                    item.id,
+                                    e.target.value,
+                                    selectedItemUnits
+                                  );
+                                }
+                              }}
+                              value=""
+                              disabled={updateStatusMutation.isPending}
+                              className="px-3 py-1 text-sm border rounded cursor-pointer"
+                            >
+                              <option value="">-- Select Status --</option>
+                              {validStatuses.map((status) => (
+                                <option key={status} value={status}>
+                                  {status.replaceAll("_", " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ===== Batch List ===== */}
+                {item.BatchItem?.length > 0 && (
+                  <div className="mt-4 border-t border-gray-300 pt-3">
+                    <p className="font-medium text-sm mb-2 text-gray-700">
+                      Batches:
+                    </p>
+                    <div className="space-y-2">
+                      {item.BatchItem.map((b) => {
+                        const activeBatchUnits = b.units.filter(
+                          (u) => u.status !== "CANCELLED"
+                        ).length;
+                        return (
+                          <div
+                            key={b.id}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div>
+                              <span className="font-semibold">
+                                {b.batch.name}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({activeBatchUnits}/{b.units.length} units)
+                              </span>
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
+                                b.status
+                              )}`}
+                            >
+                              {b.status.replaceAll("_", " ")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

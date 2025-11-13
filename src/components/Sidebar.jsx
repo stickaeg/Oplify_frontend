@@ -72,7 +72,7 @@ const Sidebar = () => {
     <aside
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
-      className={`bg-gray-300 min-h-screen transition-all duration-300 shadow-2xl z-10 
+      className={`fixed bg-gray-300 min-h-screen transition-all duration-300 shadow-2xl z-10 
         ${isOpen ? "w-64" : "w-16"} flex flex-col`}
     >
       <div className="py-4 px-4">
@@ -136,9 +136,9 @@ const Sidebar = () => {
           onClick={handleLogout}
           className="w-full cursor-pointer flex items-center gap-3 px-3 py-2 text-gray-800 hover:bg-gray-400 rounded-md transition-all"
         >
-          <FiLogOut className="text-xl" />
+          <FiLogOut className="flex-shrink-0 text-xl" />
           <span
-            className={`whitespace-nowrap transition-opacity duration-300  ${
+            className={`whitespace-nowrap transition-opacity duration-300 ${
               isOpen ? "opacity-100" : "opacity-0"
             }`}
           >

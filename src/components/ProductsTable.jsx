@@ -61,7 +61,7 @@ const ProductsTable = () => {
   const { data: products, page: currentPage, pages } = data;
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative p-6">
       {isFetching && (
         <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
           <Spinner />

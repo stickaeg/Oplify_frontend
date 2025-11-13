@@ -19,9 +19,9 @@ const getStatusClasses = (status) => {
     case "CUT":
       return "bg-rose-200 text-rose-800";
     case "FULFILLMENT":
-      return "bg-gray-200 text-gray-800";
+      return "bg-emerald-200 text-emerald-800 ";
     case "PACKED":
-      return "bg-gray-300 text-gray-900";
+      return "bg-green-300 text-green-900";
     case "COMPLETED":
       return "bg-green-200 text-green-800";
     case "CANCELLED":
