@@ -16,6 +16,8 @@ const OrderDetail = () => {
   const [selectedUnits, setSelectedUnits] = useState({});
   const [expandedItems, setExpandedItems] = useState({});
 
+  const [hoveredImage, setHoveredImage] = useState(null);
+
   const {
     data: order,
     isLoading,
@@ -264,14 +266,54 @@ const OrderDetail = () => {
                 key={item.id}
                 className="border border-gray-200 rounded-lg p-4 shadow-sm"
               >
-                <div className="flex items-center gap-4">
-                  {item.product?.imgUrl && (
-                    <img
-                      src={item.product.imgUrl}
-                      alt={item.product.title}
-                      className="w-16 h-16 object-contain rounded"
-                    />
-                  )}
+                <div className="flex items-center gap-4 relative">
+                  {/* ✅ Image container with hover preview positioned next to it */}
+                  <div className="relative">
+                    {item.product?.imgUrl && (
+                      <>
+                        <img
+                          src={item.product.imgUrl}
+                          alt={item.product.title}
+                          className="w-16 h-16 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity"
+                          onMouseEnter={() =>
+                            setHoveredImage({
+                              url: item.product.imgUrl,
+                              title: item.product.title,
+                            })
+                          }
+                          onMouseLeave={() => setHoveredImage(null)}
+                        />
+
+                        {/* ✅ Enlarged preview appears to the right */}
+                        {hoveredImage && (
+                          <div
+                            className="absolute left-0 top-0 z-50 w-100 pointer-events-none flex items-center"
+                            onMouseEnter={() =>
+                              setHoveredImage({
+                                url: item.product.imgUrl,
+                                title: item.product.title,
+                              })
+                            }
+                            onMouseLeave={() => setHoveredImage(null)}
+                          >
+                            <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-2">
+                              <img
+                                src={hoveredImage.url}
+                                alt={hoveredImage.title}
+                                className="w-64 h-64 object-contain"
+                              />
+                              <div className="mt-2 px-2 py-1 bg-gray-100 rounded">
+                                <p className="text-gray-900 font-semibold text-sm">
+                                  {hoveredImage.title}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
                   <div className="flex-1">
                     <p className="font-semibold text-lg">
                       {item.product?.title || "—"}
@@ -315,6 +357,7 @@ const OrderDetail = () => {
                       </div>
                     )}
                   </div>
+
                   <div className="text-right space-y-2">
                     <p className="font-semibold">Qty: {item.quantity}</p>
                     <p>EGP {item.price?.toFixed(2)}</p>
