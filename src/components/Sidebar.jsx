@@ -8,6 +8,7 @@ import {
   FiArchive,
   FiCommand,
   FiLogOut,
+  FiDatabase,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -16,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 const menuByRole = {
   admin: [
     { name: "dashboard", path: "/dashboard", icon: <FiHome /> },
+    { name: "Stock", path: "/stock", icon: <FiDatabase /> },
     { name: "Products", path: "/products", icon: <FiUsers /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Batches", path: "/batches", icon: <FiArchive /> },

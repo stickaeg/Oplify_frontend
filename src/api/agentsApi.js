@@ -141,3 +141,34 @@ export const replacement = async (unitId, reason) => {
   });
   return res.data;
 };
+
+// StockItem APIs
+export const createStockItem = (data) =>
+  axiosClient.post("/inventory/stock-items", data);
+export const getStockItems = () => axiosClient.get("/inventory/stock-items");
+export const getStockItemById = (id) =>
+  axiosClient.get(`/inventory/stock-items/${id}`);
+export const updateStockItem = (id, data) =>
+  axiosClient.put(`/inventory/stock-items/${id}`, data);
+export const deleteStockItem = (id) =>
+  axiosClient.delete(`/inventory/stock-items/${id}`);
+
+// StockVariant APIs
+export const createStockVariant = (data) =>
+  axiosClient.post("/inventory/stock-variants", data);
+export const getStockVariants = () =>
+  axiosClient.get("/inventory/stock-variants");
+export const getStockVariantById = (id) =>
+  axiosClient.get(`/inventory/stock-variants/${id}`);
+export const updateStockVariant = (id, data) =>
+  axiosClient.put(`/inventory/stock-variants/${id}`, data);
+export const deleteStockVariant = (id) =>
+  axiosClient.delete(`/inventory/stock-variants/${id}`);
+
+// ProductStockMapping APIs
+export const createProductStockMapping = (data) =>
+  axiosClient.post("/inventory/product-stock-mappings", data);
+export const getProductStockMappings = () =>
+  axiosClient.get("/inventory/product-stock-mappings");
+export const deleteProductStockMapping = (id) =>
+  axiosClient.delete(`/inventory/product-stock-mappings/${id}`);

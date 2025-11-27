@@ -7,6 +7,7 @@ import BatchesDetail from "../pages/BatchesDetail";
 import PrinterScanner from "../pages/PrinterScanner";
 import CutterScanner from "../pages/CutterScanner";
 import FulfillmentScanner from "../pages/FulfillmentScanner";
+import Stock from "../pages/Stock";
 
 // 🧩 Lazy-loaded pages
 const LoginPage = lazy(() => import("../pages/LoginPage"));
@@ -38,6 +39,7 @@ const AppRoutes = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/products" element={<Products />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/stock" element={<Stock />} />
               <Route path="/batches" element={<Batches />} />
               <Route path="/batches/:batchId" element={<BatchesDetail />} />
               <Route path="/scan/printer" element={<PrinterScanner />} />

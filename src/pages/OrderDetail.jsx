@@ -132,11 +132,14 @@ const OrderDetail = () => {
     "FULFILLMENT",
     "PACKED",
     "COMPLETED",
+    "RETURNED",
     "CANCELLED",
   ];
 
-  const canEditStatus = user?.role === "ADMIN" || user?.role === "FULFILLMENT";
-  const canReplace = ["ADMIN", "DESIGNER", "PRINTER"].includes(user?.role);
+  const canEditStatus = user?.role === "ADMIN" || user?.role === "FULLFILLMENT";
+  const canReplace = ["ADMIN", "DESIGNER", "PRINTER", "FULLFILLMENT"].includes(
+    user?.role
+  );
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -477,17 +480,6 @@ const OrderDetail = () => {
                                     disabled={replacementMutation.isPending}
                                     className="flex items-center gap-1 text-xs px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="Create replacement for redesign"
-                                  >
-                                    <MdRefresh size={14} />
-                                    Redesign
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleReplacement(unit.id, "REPRINT")
-                                    }
-                                    disabled={replacementMutation.isPending}
-                                    className="flex items-center gap-1 text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Create replacement for reprint"
                                   >
                                     <MdRefresh size={14} />
                                     Reprint
