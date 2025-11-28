@@ -16,6 +16,7 @@ const validStatuses = [
   "CUTTING",
   "CUT",
   "FULFILLMENT",
+  "FULFILLED",
   "PACKED",
   "COMPLETED",
   "CANCELLED",

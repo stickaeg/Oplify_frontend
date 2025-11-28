@@ -130,6 +130,7 @@ const OrderDetail = () => {
     "CUTTING",
     "CUT",
     "FULFILLMENT",
+    "FULFILLED",
     "PACKED",
     "COMPLETED",
     "RETURNED",
