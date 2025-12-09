@@ -37,7 +37,7 @@ const ProductTypesSoldCards = ({ filters }) => {
         {Object.entries(totalsByProductType).map(([type, count]) => (
           <div
             key={type}
-            className="p-4 bg-white rounded-lg shadow-md w-52 text-center"
+            className="p-4 bg-white rounded-lg shadow-md w-60 text-center"
           >
             <h3 className="font-semibold text-gray-800">{type}</h3>
             <p className="text-gray-600 mt-2">

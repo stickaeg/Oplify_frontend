@@ -5,6 +5,7 @@ import { getOrders, getStores } from "../api/agentsApi";
 import Table from "./Table";
 import Spinner from "./Loading";
 import getStatusClasses from "../utils/statusColors";
+import { useAuth } from "../context/AuthContext";
 
 const OrdersTable = () => {
   const [page, setPage] = useState(1);
@@ -63,6 +64,9 @@ const OrdersTable = () => {
 
   const { data: orders, page: currentPage, pages } = data;
 
+  const { user } = useAuth();
+  console.log(user);
+
   const handleRowClick = (orderId) => navigate(`/orders/${orderId}`);
 
   return (
@@ -72,26 +76,28 @@ const OrdersTable = () => {
       {/* ===== Filters ===== */}
       <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         {/* Store Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Store
-          </label>
-          <select
-            value={storeId}
-            onChange={(e) => {
-              setStoreId(e.target.value);
-              setPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-3 py-2 w-48 bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 transition-colors"
-          >
-            <option value="">All Stores</option>
-            {stores.data?.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {user.role != "USER" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Store
+            </label>
+            <select
+              value={storeId}
+              onChange={(e) => {
+                setStoreId(e.target.value);
+                setPage(1);
+              }}
+              className="border border-gray-300 rounded-lg px-3 py-2 w-48 bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 transition-colors"
+            >
+              <option value="">All Stores</option>
+              {stores.data?.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Status Filter */}
         <div>
@@ -117,6 +123,7 @@ const OrdersTable = () => {
             <option value="CUTTING">Cutting</option>
             <option value="CUT">Cut</option>
             <option value="FULFILLMENT">Fulfillment</option>
+            <option value="FULFILLED">Fulfilled</option>
             <option value="PACKED">Packed</option>
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>

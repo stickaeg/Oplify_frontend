@@ -1,84 +1,65 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createBatch, listRules } from "../api/adminsApi";
+import { createMainStock, listRules } from "../api/adminsApi";
 
-const CreateBatch = ({ onClose }) => {
+const CreateMainStock = ({ onClose }) => {
+  const [mainStockName, setMainStockName] = useState("");
   const [selectedRules, setSelectedRules] = useState([]);
-  const [batchName, setBatchName] = useState("");
-  const [maxCapacity, setMaxCapacity] = useState("");
 
   const queryClient = useQueryClient();
 
-  const filters = { isPod: true, requiresStock: false }; // can be dynamic
+  // 🔍 Fetch all rules dynamically (you can adjust filters if needed)
+  const filters = { isPod: false, requiresStock: false }; // can be dynamic
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ["rules", filters], // cache separately per filter combination
     queryFn: () => listRules(filters),
   });
-  console.log(rules);
-
+  // 📤 Mutation to create main stock
   const mutation = useMutation({
-    mutationFn: createBatch,
+    mutationFn: createMainStock,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["batches"] });
+      queryClient.invalidateQueries({ queryKey: ["mainStock"] });
       if (onClose) onClose();
     },
     onError: (err) => {
-      console.error("Error creating batch:", err);
-      alert(err?.response?.data?.error || "Failed to create batch");
+      console.error("Error creating main stock:", err);
+      alert(err?.response?.data?.error || "Failed to create main stock");
     },
   });
 
-  // 📤 Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!maxCapacity) return alert("Please enter max capacity");
+    if (!mainStockName.trim())
+      return alert("Please enter a name for the main stock");
     if (selectedRules.length === 0)
       return alert("Select at least one rule to include");
 
     mutation.mutate({
-      batchName: batchName.trim(),
-      maxCapacity: parseInt(maxCapacity),
-      ruleIds: selectedRules, // ✅ send IDs, not names
+      name: mainStockName.trim(),
+
+      ruleIds: selectedRules, // send array of rule IDs
     });
   };
-
-  // 🧩 Handle multiple rule selection
-  const handleRuleSelect = (e) => {
-    const selected = Array.from(e.target.selectedOptions, (opt) => opt.value);
-    setSelectedRules(selected);
-  };
-
-  console.log(rules);
 
   return (
     <form
       onSubmit={handleSubmit}
       className="space-y-4 w-96 bg-white p-6 rounded-xl shadow"
     >
-      <h2 className="text-xl font-semibold">Create Global Batch</h2>
+      <h2 className="text-xl font-semibold">Create Main Stock</h2>
 
-      {/* Batch name */}
+      {/* Main stock name */}
       <div>
-        <label className="block text-sm font-medium mb-1">Batch Name</label>
+        <label className="block text-sm font-medium mb-1">
+          Main Stock Name
+        </label>
         <input
           type="text"
-          value={batchName}
-          onChange={(e) => setBatchName(e.target.value)}
+          value={mainStockName}
+          onChange={(e) => setMainStockName(e.target.value)}
           className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Enter batch name (optional)"
-        />
-      </div>
-
-      {/* Max capacity */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Max Capacity</label>
-        <input
-          type="number"
-          value={maxCapacity}
-          onChange={(e) => setMaxCapacity(e.target.value)}
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Enter max items per batch"
+          placeholder="Enter main stock name"
           required
         />
       </div>
@@ -111,17 +92,18 @@ const CreateBatch = ({ onClose }) => {
                     );
                   }}
                 />
-
                 <div className="text-sm">
                   <span className="font-medium">{rule.name}</span>{" "}
                   <span className="text-gray-500">
                     ({rule.isPod ? "POD" : "Stock"})
                   </span>
+                  {rule.variantTitle && (
+                    <div className="text-xs text-gray-400">
+                      Variant: {rule.variantTitle}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-400">
                     Store: {rule.store?.name || "Unknown"}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Store: {rule.variantTitle || "Unknown"}
                   </div>
                 </div>
               </label>
@@ -144,11 +126,11 @@ const CreateBatch = ({ onClose }) => {
           className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
           disabled={mutation.isLoading}
         >
-          {mutation.isLoading ? "Creating..." : "Create Batch"}
+          {mutation.isLoading ? "Creating..." : "Create Main Stock"}
         </button>
       </div>
     </form>
   );
 };
 
-export default CreateBatch;
+export default CreateMainStock;

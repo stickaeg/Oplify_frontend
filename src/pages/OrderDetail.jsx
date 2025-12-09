@@ -27,6 +27,7 @@ const OrderDetail = () => {
     queryFn: () => getOrderById(id),
   });
 
+  console.log("Order Data:", order);
   // ✅ Mutation to update item status
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderItemId, status, unitIds }) =>
@@ -36,7 +37,7 @@ const OrderDetail = () => {
       setSelectedUnits({});
     },
     onError: (error) => {
-      console.error("Failed to update status:", error);
+      console.error("❌ Frontend error:", error.response?.data); // 👈 BETTER ERROR
       alert("Failed to update status");
     },
   });

@@ -8,11 +8,16 @@ import OrdersCard from "../components/OrdersCard";
 import ProductTypesSoldCards from "./ProductTypesSoldCards";
 import { getStores } from "../api/agentsApi";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../context/AuthContext";
+import CreateMainStock from "../components/createMainStock";
 
 const Dashboard = () => {
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isRuleOpen, setIsRuleOpen] = useState(false);
   const [isBatchOpen, setIsBatchOpen] = useState(false);
+  const [isMainStockOpen, setIsMainStockOpen] = useState(false);
+
+  const { user } = useAuth();
 
   const [filters, setFilters] = useState({
     storeId: "",
@@ -33,21 +38,22 @@ const Dashboard = () => {
       <div className="flex flex-col gap-4 p-4 ">
         {/* 🔵 Shared Filters for ALL components */}
         <div className="flex gap-4 bg-white p-4 rounded-lg shadow-md">
-          {/* Store Filter */}
-          <select
-            className="border p-2 rounded border-gray-300"
-            value={filters.storeId}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, storeId: e.target.value }))
-            }
-          >
-            <option value="">All Stores</option>
-            {stores.data?.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </select>
+          {user.role != "USER" && (
+            <select
+              className="border p-2 rounded border-gray-300"
+              value={filters.storeId}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, storeId: e.target.value }))
+              }
+            >
+              <option value="">All Stores</option>
+              {stores.data?.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           {/* Date From */}
           <input
@@ -77,54 +83,71 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        <button
-          onClick={() => setIsStoreOpen(true)}
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-        >
-          + Create Store
-        </button>
+      {user.role !== "USER" && (
+        <>
+          <div className="flex gap-2 flex-wrap px-6">
+            <button
+              onClick={() => setIsStoreOpen(true)}
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            >
+              + Create Store
+            </button>
 
-        <button
-          onClick={() => setIsRuleOpen(true)}
-          className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-        >
-          + Create Rule
-        </button>
+            <button
+              onClick={() => setIsRuleOpen(true)}
+              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+            >
+              + Create Rule
+            </button>
 
-        <button
-          onClick={() => setIsBatchOpen(true)}
-          className="px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
-        >
-          + Create Batch
-        </button>
-      </div>
-      {/* Tables */}
-      <StoreTable />
-      <RulesTable />
-      {/* Create Store Modal */}
-      {isStoreOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <CreateStore onClose={() => setIsStoreOpen(false)} />
+            <button
+              onClick={() => setIsBatchOpen(true)}
+              className="px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
+            >
+              + Create Batch
+            </button>
+            <button
+              onClick={() => setIsMainStockOpen(true)}
+              className="px-4 py-2 rounded bg-orange-600 text-white hover:bg-orange-700"
+            >
+              + Create Main Stock
+            </button>
           </div>
-        </div>
-      )}
-      {/* Create Rule Modal */}
-      {isRuleOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <CreateRule onClose={() => setIsRuleOpen(false)} />
-          </div>
-        </div>
-      )}
-      {/* ✅ Create Batch Modal */}
-      {isBatchOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <CreateBatch onClose={() => setIsBatchOpen(false)} />
-          </div>
-        </div>
+          {/* Tables */}
+          <StoreTable />
+          <RulesTable />
+          {/* Create Store Modal */}
+          {isStoreOpen && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <CreateStore onClose={() => setIsStoreOpen(false)} />
+              </div>
+            </div>
+          )}
+          {/* Create Rule Modal */}
+          {isRuleOpen && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <CreateRule onClose={() => setIsRuleOpen(false)} />
+              </div>
+            </div>
+          )}
+          {/* ✅ Create Batch Modal */}
+          {isBatchOpen && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <CreateBatch onClose={() => setIsBatchOpen(false)} />
+              </div>
+            </div>
+          )}
+          {isMainStockOpen && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <CreateMainStock onClose={() => setIsMainStockOpen(false)} />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

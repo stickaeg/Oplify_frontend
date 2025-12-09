@@ -38,6 +38,7 @@ export function getRoleBasedPath(role) {
     PRINTER: "/batches",
     CUTTER: "/batches",
     FULLFILLMENT: "/fulfillment",
+    USER: "/orders",
   };
   return roleRoutes[role];
 }

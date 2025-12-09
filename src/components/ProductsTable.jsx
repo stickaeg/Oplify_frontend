@@ -5,6 +5,7 @@ import { listProductTypesByStore } from "../api/adminsApi";
 
 import Table from "./Table";
 import Spinner from "./Loading";
+import { useAuth } from "../context/AuthContext";
 
 const ProductsTable = () => {
   const [page, setPage] = useState(1);
@@ -15,6 +16,7 @@ const ProductsTable = () => {
   const [productType, setProductType] = useState("");
   const [debouncedProductType, setDebouncedProductType] = useState(""); // 👈 for debounce
   const [isPod, setIsPod] = useState("");
+  const { user } = useAuth();
 
   // 🕒 Debounce effect for productType (runs 500ms after user stops typing)
   useEffect(() => {
@@ -70,59 +72,63 @@ const ProductsTable = () => {
 
       {/* ===== Filters ===== */}
       <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-lg shadow-sm">
-        {/* Store filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Store
-          </label>
-          <select
-            value={storeId}
-            onChange={(e) => {
-              setStoreId(e.target.value);
-              setPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-3 py-2 w-48"
-          >
-            <option value="">All Stores</option>
-            {stores.data?.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {user.role !== "USER" && (
+          <>
+            {/* Store Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Store
+              </label>
+              <select
+                value={storeId}
+                onChange={(e) => {
+                  setStoreId(e.target.value);
+                  setPage(1);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 w-48"
+              >
+                <option value="">All Stores</option>
+                {stores.data?.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Product type filter (depends on store) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Product Type
-          </label>
-          <select
-            value={productType}
-            onChange={(e) => {
-              setProductType(e.target.value);
-              setPage(1);
-            }}
-            disabled={!storeId || typesLoading}
-            className={`border rounded-lg px-3 py-2 w-48 transition-colors duration-200
-      ${
-        !storeId || typesLoading
-          ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
-          : "bg-white text-gray-800 border-gray-300 hover:border-gray-400 focus:border-blue-500"
-      }`}
-          >
-            <option value="">
-              {typesLoading ? "Loading..." : "All Types"}
-            </option>
-            {productTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Product Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Product Type
+              </label>
+              <select
+                value={productType}
+                onChange={(e) => {
+                  setProductType(e.target.value);
+                  setPage(1);
+                }}
+                disabled={!storeId || typesLoading}
+                className={`border rounded-lg px-3 py-2 w-48 transition-colors duration-200
+          ${
+            !storeId || typesLoading
+              ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+              : "bg-white text-gray-800 border-gray-300 hover:border-gray-400 focus:border-blue-500"
+          }`}
+              >
+                <option value="">
+                  {typesLoading ? "Loading..." : "All Types"}
+                </option>
+                {productTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
-        {/* POD filter */}
+        {/* POD Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             POD
@@ -141,7 +147,7 @@ const ProductsTable = () => {
           </select>
         </div>
       </div>
-      {/* ===== Products Table ===== */}
+
       <Table>
         <Table.Head>
           <Table.HeaderCell>Image</Table.HeaderCell>

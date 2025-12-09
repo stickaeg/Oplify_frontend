@@ -25,20 +25,26 @@ const menuByRole = {
   ],
   designer: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiHome /> },
+    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
   ],
   printer: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiHome /> },
+    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
   ],
   cutter: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiHome /> },
+    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
   ],
   fullfillment: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiHome /> },
+    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Scanner", path: "/fulfillment", icon: <FiCommand /> },
+  ],
+  user: [
+    { name: "Dashboard", path: "/dashboard", icon: <FiHome /> },
+    { name: "Stock", path: "/stock", icon: <FiDatabase /> },
+    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
+    { name: "Products", path: "/products", icon: <FiUsers /> },
   ],
 };
 

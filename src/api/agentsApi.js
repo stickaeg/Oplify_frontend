@@ -58,12 +58,16 @@ export const updateBatchStatus = async (batchId, status) => {
 };
 
 export const itemStatusUpdate = async (orderItemId, status, unitIds = null) => {
+  const payload = { status };
+
+  // 👇 Only add unitIds if it's a real array
+  if (unitIds && Array.isArray(unitIds) && unitIds.length > 0) {
+    payload.unitIds = unitIds;
+  }
+
   const res = await axiosClient.patch(
     `/orders/orderItems/${orderItemId}/status`,
-    {
-      status,
-      unitIds, // ✅ Pass array of unit IDs for partial updates
-    }
+    payload
   );
   return res.data;
 };

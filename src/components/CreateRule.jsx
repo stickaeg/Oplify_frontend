@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createRule, listProductTypesByStore } from "../api/adminsApi";
+import {
+  createRule,
+  listProductTypesByStore,
+  listVariantTitlesByProductType,
+} from "../api/adminsApi";
 import { getStores } from "../api/agentsApi";
 
 const CreateRule = ({ onClose }) => {
   const [selectedStore, setSelectedStore] = useState("");
   const [productTypes, setProductTypes] = useState([]);
   const [selectedProductType, setSelectedProductType] = useState("");
+  const [selectedVariantTitle, setSelectedVariantTitle] = useState(""); // 👈 Add this
   const [isPod, setIsPod] = useState(true);
 
   const queryClient = useQueryClient();
@@ -31,6 +36,21 @@ const CreateRule = ({ onClose }) => {
     fetchTypes();
   }, [selectedStore]);
 
+  useEffect(() => {
+    setSelectedVariantTitle("");
+  }, [selectedProductType]);
+
+  const { data: variantsData, isLoading: variantsLoading } = useQuery({
+    queryKey: ["variantTitles", selectedStore, selectedProductType],
+    queryFn: () =>
+      listVariantTitlesByProductType(selectedStore, selectedProductType),
+    enabled: !!selectedStore && !!selectedProductType,
+    // ✅ Use select to extract variantTitles directly
+    select: (data) => data?.variantTitles || [],
+  });
+
+  const variantTitles = variantsData || []; // ✅ Use query data directly
+
   const mutation = useMutation({
     mutationFn: createRule,
     onSuccess: () => {
@@ -51,6 +71,7 @@ const CreateRule = ({ onClose }) => {
     mutation.mutate({
       name: selectedProductType, // use product type as rule name
       isPod,
+      variantTitle: selectedVariantTitle || null, // 👈 ADD THIS!
       storeName: selectedStore,
     });
   };
@@ -67,7 +88,7 @@ const CreateRule = ({ onClose }) => {
           onChange={(e) => {
             setSelectedStore(e.target.value);
             setProductTypes([]);
-            setSelectedProductType("");
+            setSelectedProductType(""); // 👈 Reset variants
           }}
           className="w-full border border-gray-300 rounded px-3 py-2"
           disabled={storesLoading}
@@ -100,6 +121,36 @@ const CreateRule = ({ onClose }) => {
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {selectedProductType && variantsLoading && (
+        <div className="text-sm text-gray-500">Loading variant titles...</div>
+      )}
+
+      {selectedProductType && variantTitles.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Select Variant Title ({variantTitles.length} unique)
+          </label>
+          <select
+            value={selectedVariantTitle || ""} // 👈 New state for selection
+            onChange={(e) => setSelectedVariantTitle(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="">
+              -- All variants for {selectedProductType} --
+            </option>
+            {variantTitles.map((title, idx) => (
+              <option key={idx} value={title}>
+                {title}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Batch names: "{selectedProductType} -{" "}
+            {selectedVariantTitle || "All Variants"}"
+          </p>
         </div>
       )}
 

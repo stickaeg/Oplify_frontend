@@ -196,7 +196,6 @@ const StockItemsList = ({ onClose }) => {
       {/* Stock Items Table */}
       <Table>
         <Table.Head>
-          <Table.HeaderCell>id</Table.HeaderCell>
           <Table.HeaderCell>Name</Table.HeaderCell>
           <Table.HeaderCell>SKU</Table.HeaderCell>
           <Table.HeaderCell>Variants</Table.HeaderCell>
@@ -210,7 +209,6 @@ const StockItemsList = ({ onClose }) => {
                 setExpandedItemId(expandedItemId === item.id ? null : item.id)
               }
             >
-              <Table.Cell>{item.id}</Table.Cell>
               <Table.Cell>{item.name}</Table.Cell>
               <Table.Cell>{item.sku}</Table.Cell>
               <Table.Cell>{item.variants?.length || 0}</Table.Cell>

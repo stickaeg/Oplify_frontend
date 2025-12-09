@@ -10,7 +10,6 @@ const RulesTable = () => {
     queryKey: ["rules"],
     queryFn: listRules,
   });
-  console.log(rulesResponse);
   const rules = Array.isArray(rulesResponse)
     ? rulesResponse
     : rulesResponse?.data || [];
@@ -40,6 +39,7 @@ const RulesTable = () => {
           <Table.HeaderCell>Rule Name</Table.HeaderCell>
           <Table.HeaderCell>Store Name</Table.HeaderCell>
           <Table.HeaderCell>Rule Type</Table.HeaderCell>
+          <Table.HeaderCell>Variant Title</Table.HeaderCell>
           <Table.HeaderCell>Actions</Table.HeaderCell>
         </Table.Head>
         <Table.Body>
@@ -48,6 +48,7 @@ const RulesTable = () => {
               <Table.Cell>{rule.name}</Table.Cell>
               <Table.Cell>{rule.store?.name}</Table.Cell>
               <Table.Cell>{rule.isPod ? "POD" : "Stock"}</Table.Cell>
+              <Table.Cell>{rule.variantTitle || "All Variants"}</Table.Cell>
               <Table.Cell>
                 <button
                   onClick={() => handleDelete(rule.id)}
