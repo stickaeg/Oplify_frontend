@@ -109,7 +109,20 @@ export const deleteProductQuantity = async (mainStockId, sku) => {
   return res.data;
 };
 
-export const getProductsByMainStock = async (mainStockId) => {
-  const res = await axiosClient.get(`/admin/mainStock/${mainStockId}/products`);
-  return res.data;
+export const getProductsByMainStock = async (
+  mainStockId,
+  { page, limit, sku, title }
+) => {
+  const res = await axiosClient.get(
+    `/admin/mainStock/${mainStockId}/products`,
+    {
+      params: {
+        page,
+        limit, // backend expects "limit"
+        sku, // optional
+        title, // optional
+      },
+    }
+  );
+  return res.data; // { data, pagination }
 };

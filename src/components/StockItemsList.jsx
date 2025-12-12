@@ -1,45 +1,100 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getStockItems,
   createStockItem,
   updateStockItem,
   deleteStockItem,
-  getStockVariants,
   createStockVariant,
   updateStockVariant,
   deleteStockVariant,
+  getStores,
 } from "../api/agentsApi";
-
+import {
+  listProductTypesByStore,
+  listVariantTitlesByProductType,
+} from "../api/adminsApi";
 import Table from "./Table";
-import { useEffect } from "react";
 
 const StockItemsList = ({ onClose }) => {
   const queryClient = useQueryClient();
 
-  // State for stock items form
+  // Stock item form
   const [itemFormData, setItemFormData] = useState({ name: "", sku: "" });
   const [editingItemId, setEditingItemId] = useState(null);
 
-  // State for currently expanded stock item to show variants and variant form
+  // Expanded stock item for variants
   const [expandedItemId, setExpandedItemId] = useState(null);
 
-  console.log(expandedItemId);
-
-  // Variant form state
+  // Variant form
   const [variantFormData, setVariantFormData] = useState({
     stockItemId: "",
     sku: "",
     name: "",
     color: "",
     size: "",
+    storeIds: [],
+    productTypes: [],
+    variantTitles: [],
     currentStock: 0,
     minStockLevel: 5,
     maxStockLevel: null,
   });
+
   const [editingVariantId, setEditingVariantId] = useState(null);
 
-  // Fetch stock items with variants
+  // UI selections for a single mapping
+  const [selectedStore, setSelectedStore] = useState("");
+  const [selectedProductType, setSelectedProductType] = useState("");
+  const [selectedVariantTitle, setSelectedVariantTitle] = useState("");
+
+  // Staged mappings: [{ storeId, productType, variantTitle }]
+  const [mappings, setMappings] = useState([]);
+
+  // Stores
+  const { data: storesRes = [], isLoading: storesLoading } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+    select: (res) => res.data,
+  });
+
+  // Product types for selected store
+  const [productTypes, setProductTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      if (!selectedStore) return;
+      try {
+        const types = await listProductTypesByStore(selectedStore);
+        setProductTypes(types);
+      } catch (err) {
+        console.error("Failed to fetch product types:", err);
+      }
+    };
+    fetchTypes();
+  }, [selectedStore]);
+
+  // Variant titles for selected store + product type
+  const { data: variantTitles = [], isLoading: variantTitlesLoading } =
+    useQuery({
+      queryKey: ["variantTitles", selectedStore, selectedProductType],
+      queryFn: () =>
+        listVariantTitlesByProductType(selectedStore, selectedProductType),
+      enabled: !!selectedStore && !!selectedProductType,
+      select: (data) => data?.variantTitles || [],
+    });
+
+  // Sync mappings → arrays on variantFormData
+  useEffect(() => {
+    setVariantFormData((prev) => ({
+      ...prev,
+      storeIds: mappings.map((m) => m.storeId),
+      productTypes: mappings.map((m) => m.productType),
+      variantTitles: mappings.map((m) => m.variantTitle),
+    }));
+  }, [mappings]);
+
+  // Stock items query
   const {
     data: itemsData,
     isLoading: itemsLoading,
@@ -48,10 +103,6 @@ const StockItemsList = ({ onClose }) => {
     queryKey: ["stockItems"],
     queryFn: getStockItems,
   });
-
-  // Fetch all variants (optional, or just use variants inside stock items)
-  // You can omit if variants come deeply nested in itemsData
-  // const { data: variantsData } = useQuery({ queryKey: ["stockVariants"], queryFn: getStockVariants });
 
   // Mutations for stock items
   const createItemMutation = useMutation({
@@ -111,19 +162,28 @@ const StockItemsList = ({ onClose }) => {
     }
   };
 
-  // Reset variant form state
-  const resetVariantForm = () =>
+  // Reset variant form and mappings
+  const resetVariantForm = () => {
     setVariantFormData({
       stockItemId: expandedItemId,
       sku: "",
       name: "",
       color: "",
       size: "",
+      storeIds: [],
+      productTypes: [],
+      variantTitles: [],
       currentStock: 0,
       minStockLevel: 5,
       maxStockLevel: null,
     });
+    setMappings([]);
+    setSelectedStore("");
+    setSelectedProductType("");
+    setSelectedVariantTitle("");
+  };
 
+  // Keep stockItemId in variant form
   useEffect(() => {
     if (expandedItemId) {
       setVariantFormData((prev) => ({
@@ -132,6 +192,7 @@ const StockItemsList = ({ onClose }) => {
       }));
     }
   }, [expandedItemId]);
+
   // Variant form submit
   const handleVariantSubmit = (e) => {
     e.preventDefault();
@@ -151,8 +212,41 @@ const StockItemsList = ({ onClose }) => {
     }
   };
 
+  // Add a mapping triple
+  const handleAddMapping = () => {
+    if (!selectedStore || !selectedProductType || !selectedVariantTitle) return;
+
+    setMappings((prev) => {
+      const next = [
+        ...prev,
+        {
+          storeId: selectedStore,
+          productType: selectedProductType,
+          variantTitle: selectedVariantTitle,
+        },
+      ];
+
+      // Deduplicate by triple
+      const deduped = Array.from(
+        new Map(
+          next.map((m) => [
+            `${m.storeId}||${m.productType}||${m.variantTitle}`,
+            m,
+          ])
+        ).values()
+      );
+
+      return deduped;
+    });
+
+    // Keep store & productType to add more titles, reset only title
+    setSelectedVariantTitle("");
+  };
+
   if (itemsLoading) return <div>Loading stock items...</div>;
   if (itemsError) return <div>Error loading stock items.</div>;
+
+  const expandedItem = itemsData?.data.find((i) => i.id === expandedItemId);
 
   return (
     <div>
@@ -227,7 +321,6 @@ const StockItemsList = ({ onClose }) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteItemMutation.mutate(item.id);
-                    // If expanded item was deleted, reset expanded
                     if (expandedItemId === item.id) setExpandedItemId(null);
                   }}
                   className="text-red-600 hover:underline"
@@ -290,7 +383,10 @@ const StockItemsList = ({ onClose }) => {
               placeholder="Size"
               value={variantFormData.size || ""}
               onChange={(e) =>
-                setVariantFormData({ ...variantFormData, size: e.target.value })
+                setVariantFormData({
+                  ...variantFormData,
+                  size: e.target.value,
+                })
               }
               className="border border-gray-400 rounded px-3 py-2"
             />
@@ -333,6 +429,74 @@ const StockItemsList = ({ onClose }) => {
               }
               className="border border-gray-400 rounded px-3 py-2 w-24"
             />
+
+            {/* Store select */}
+            <select
+              value={selectedStore}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedStore(value);
+                setSelectedProductType("");
+                setSelectedVariantTitle("");
+              }}
+              className="border border-gray-400 rounded px-3 py-2"
+              disabled={storesLoading}
+            >
+              <option value="">Select store</option>
+              {storesRes.map((store) => (
+                <option key={store.id} value={store.name}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Product type select */}
+            <select
+              value={selectedProductType}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedProductType(value);
+                setSelectedVariantTitle("");
+              }}
+              disabled={!selectedStore || !productTypes.length}
+              className="border border-gray-400 rounded px-3 py-2"
+            >
+              <option value="">Select product type</option>
+              {productTypes.map((pt) => (
+                <option key={pt} value={pt}>
+                  {pt}
+                </option>
+              ))}
+            </select>
+
+            {/* Variant title select */}
+            <select
+              value={selectedVariantTitle}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedVariantTitle(value);
+              }}
+              disabled={!selectedProductType || variantTitlesLoading}
+              className="border border-gray-400 rounded px-3 py-2 min-w-[200px]"
+            >
+              <option value="">Select variant title</option>
+              {variantTitles.map((vt, idx) => (
+                <option key={idx} value={vt}>
+                  {vt}
+                </option>
+              ))}
+            </select>
+
+            {/* Add mapping button */}
+            <button
+              type="button"
+              onClick={handleAddMapping}
+              className="px-3 py-2 border rounded"
+            >
+              Add mapping
+            </button>
+
+            {/* Submit / cancel */}
             <button
               type="submit"
               disabled={
@@ -357,6 +521,27 @@ const StockItemsList = ({ onClose }) => {
             )}
           </form>
 
+          {/* Show staged mappings */}
+          <div className="w-full flex flex-wrap gap-2 mb-4">
+            {mappings.map((m, idx) => (
+              <span
+                key={`${m.storeId}-${m.productType}-${m.variantTitle}-${idx}`}
+                className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm"
+              >
+                {m.storeId} / {m.productType} / {m.variantTitle}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMappings((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                  className="ml-1 text-red-500"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
           {/* Variants Table */}
           <Table>
             <Table.Head>
@@ -367,54 +552,77 @@ const StockItemsList = ({ onClose }) => {
               <Table.HeaderCell>Current Stock</Table.HeaderCell>
               <Table.HeaderCell>Min Stock</Table.HeaderCell>
               <Table.HeaderCell>Max Stock</Table.HeaderCell>
+              <Table.HeaderCell>Stores</Table.HeaderCell>
+              <Table.HeaderCell>Product Types</Table.HeaderCell>
+              <Table.HeaderCell>Variant Titles</Table.HeaderCell>
               <Table.HeaderCell>Actions</Table.HeaderCell>
             </Table.Head>
             <Table.Body>
-              {itemsData?.data
-                .find((i) => i.id === expandedItemId)
-                ?.variants.map((variant) => (
-                  <Table.Row key={variant.id}>
-                    <Table.Cell>{variant.sku}</Table.Cell>
-                    <Table.Cell>{variant.name}</Table.Cell>
-                    <Table.Cell>{variant.color || "-"}</Table.Cell>
-                    <Table.Cell>{variant.size || "-"}</Table.Cell>
-                    <Table.Cell>{variant.currentStock}</Table.Cell>
-                    <Table.Cell>{variant.minStockLevel}</Table.Cell>
-                    <Table.Cell>{variant.maxStockLevel ?? "-"}</Table.Cell>
-                    <Table.Cell>
-                      <button
-                        onClick={() => {
-                          setVariantFormData({
-                            stockItemId: expandedItemId,
-                            sku: variant.sku,
-                            name: variant.name,
-                            color: variant.color || "",
-                            size: variant.size || "",
-                            currentStock: variant.currentStock,
-                            minStockLevel: variant.minStockLevel,
-                            maxStockLevel: variant.maxStockLevel,
-                          });
-                          setEditingVariantId(variant.id);
-                        }}
-                        className="mr-4 text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteVariantMutation.mutate(variant.id)}
-                        className="text-red-600 hover:underline"
-                        disabled={deleteVariantMutation.isLoading}
-                      >
-                        Delete
-                      </button>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              {!itemsData?.data.find((i) => i.id === expandedItemId)?.variants
-                .length && (
+              {expandedItem?.variants.map((variant) => (
+                <Table.Row key={variant.id}>
+                  <Table.Cell>{variant.sku}</Table.Cell>
+                  <Table.Cell>{variant.name}</Table.Cell>
+                  <Table.Cell>{variant.color || "-"}</Table.Cell>
+                  <Table.Cell>{variant.size || "-"}</Table.Cell>
+                  <Table.Cell>{variant.currentStock}</Table.Cell>
+                  <Table.Cell>{variant.minStockLevel}</Table.Cell>
+                  <Table.Cell>{variant.maxStockLevel ?? "-"}</Table.Cell>
+                  <Table.Cell>{(variant.storeIds || []).join(", ")}</Table.Cell>
+                  <Table.Cell>
+                    {(variant.productTypes || []).join(", ")}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {(variant.variantTitles || []).join(", ")}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <button
+                      onClick={() => {
+                        setVariantFormData({
+                          stockItemId: expandedItemId,
+                          sku: variant.sku,
+                          name: variant.name,
+                          color: variant.color || "",
+                          size: variant.size || "",
+                          storeIds: variant.storeIds || [],
+                          productTypes: variant.productTypes || [],
+                          variantTitles: variant.variantTitles || [],
+                          currentStock: variant.currentStock,
+                          minStockLevel: variant.minStockLevel,
+                          maxStockLevel: variant.maxStockLevel,
+                        });
+
+                        const newMappings =
+                          (variant.storeIds || []).map((s, i) => ({
+                            storeId: s,
+                            productType: (variant.productTypes || [])[i] || "",
+                            variantTitle:
+                              (variant.variantTitles || [])[i] || "",
+                          })) || [];
+
+                        setMappings(newMappings);
+                        setSelectedStore("");
+                        setSelectedProductType("");
+                        setSelectedVariantTitle("");
+                        setEditingVariantId(variant.id);
+                      }}
+                      className="mr-4 text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteVariantMutation.mutate(variant.id)}
+                      className="text-red-600 hover:underline"
+                      disabled={deleteVariantMutation.isLoading}
+                    >
+                      Delete
+                    </button>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+              {!expandedItem?.variants?.length && (
                 <Table.Row>
                   <Table.Cell
-                    colSpan={8}
+                    colSpan={11}
                     className="text-center p-4 text-gray-500"
                   >
                     No variants found for this stock item.

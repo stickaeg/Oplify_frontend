@@ -11,7 +11,9 @@ const CreateRule = ({ onClose }) => {
   const [selectedStore, setSelectedStore] = useState("");
   const [productTypes, setProductTypes] = useState([]);
   const [selectedProductType, setSelectedProductType] = useState("");
-  const [selectedVariantTitle, setSelectedVariantTitle] = useState(""); // 👈 Add this
+  const [selectedVariantTitle, setSelectedVariantTitle] = useState("");
+  const [requiresStock, setRequiresStock] = useState(false);
+
   const [isPod, setIsPod] = useState(true);
 
   const queryClient = useQueryClient();
@@ -45,7 +47,6 @@ const CreateRule = ({ onClose }) => {
     queryFn: () =>
       listVariantTitlesByProductType(selectedStore, selectedProductType),
     enabled: !!selectedStore && !!selectedProductType,
-    // ✅ Use select to extract variantTitles directly
     select: (data) => data?.variantTitles || [],
   });
 
@@ -71,7 +72,8 @@ const CreateRule = ({ onClose }) => {
     mutation.mutate({
       name: selectedProductType, // use product type as rule name
       isPod,
-      variantTitle: selectedVariantTitle || null, // 👈 ADD THIS!
+      requiresStock, // 👈 send boolean
+      variantTitle: selectedVariantTitle || null,
       storeName: selectedStore,
     });
   };
@@ -134,7 +136,7 @@ const CreateRule = ({ onClose }) => {
             Select Variant Title ({variantTitles.length} unique)
           </label>
           <select
-            value={selectedVariantTitle || ""} // 👈 New state for selection
+            value={selectedVariantTitle || ""}
             onChange={(e) => setSelectedVariantTitle(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2"
           >
@@ -180,7 +182,33 @@ const CreateRule = ({ onClose }) => {
           </label>
         </div>
       </div>
-
+      {/* Requires stock */}
+      <div>
+        <p className="text-sm font-medium mb-1">Requires Stock</p>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="requiresStock"
+              value="yes"
+              checked={requiresStock === true}
+              onChange={() => setRequiresStock(true)}
+            />
+            Yes
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="requiresStock"
+              value="no"
+              checked={requiresStock === false}
+              onChange={() => setRequiresStock(false)}
+            />
+            No
+          </label>
+        </div>
+      </div>
+      
       {/* Buttons */}
       <div className="flex justify-end gap-2 mt-4">
         <button
