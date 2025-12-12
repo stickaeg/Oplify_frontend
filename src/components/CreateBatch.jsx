@@ -9,12 +9,11 @@ const CreateBatch = ({ onClose }) => {
 
   const queryClient = useQueryClient();
 
-  const filters = { isPod: true, requiresStock: false }; // can be dynamic
+  const filters = { isPod: true }; // can be dynamic
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ["rules", filters], // cache separately per filter combination
     queryFn: () => listRules(filters),
   });
-  console.log(rules);
 
   const mutation = useMutation({
     mutationFn: createBatch,
