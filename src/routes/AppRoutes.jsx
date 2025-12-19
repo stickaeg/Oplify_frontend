@@ -17,6 +17,7 @@ const Orders = lazy(() => import("../pages/Orders"));
 const Batches = lazy(() => import("../pages/Batches"));
 const OrderDetail = lazy(() => import("../pages/OrderDetail"));
 const UserInfo = lazy(() => import("../pages/UserInfo"));
+const Returns = lazy(() => import("../pages/Returns"));
 
 const AppRoutes = () => {
   return (
@@ -38,6 +39,7 @@ const AppRoutes = () => {
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/returns" element={<Returns />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/stock" element={<Stock />} />
               <Route path="/batches" element={<Batches />} />

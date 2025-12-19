@@ -18,6 +18,7 @@ const menuByRole = {
   admin: [
     { name: "dashboard", path: "/dashboard", icon: <FiHome /> },
     { name: "Stock", path: "/stock", icon: <FiDatabase /> },
+    { name: "Returns", path: "/returns", icon: <FiDatabase /> },
     { name: "Products", path: "/products", icon: <FiUsers /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Batches", path: "/batches", icon: <FiArchive /> },
@@ -43,6 +44,7 @@ const menuByRole = {
   user: [
     { name: "Dashboard", path: "/dashboard", icon: <FiHome /> },
     { name: "Stock", path: "/stock", icon: <FiDatabase /> },
+    { name: "Returns", path: "/returns", icon: <FiDatabase /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
     { name: "Products", path: "/products", icon: <FiUsers /> },
   ],

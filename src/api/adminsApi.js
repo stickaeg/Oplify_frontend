@@ -126,3 +126,18 @@ export const getProductsByMainStock = async (
   );
   return res.data; // { data, pagination }
 };
+
+export const getReturnedItems = async (filters = {}) => {
+  const res = await axiosClient.get("/admin/dashboard/returnedItems", {
+    params: {
+      storeId: filters.storeId, // must be this name
+      productType: filters.productType,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      page: filters.page,
+      limit: filters.limit,
+    },
+  });
+
+  return res.data;
+};
