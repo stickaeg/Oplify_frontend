@@ -12,6 +12,16 @@ export const createBatch = (data) => {
   return axiosClient.post("/admin/batches", data);
 };
 
+// NEW: get rules for a specific batch (to build the checkbox UI)
+export const getBatchRules = (batchId) =>
+  axiosClient.get(`/admin/batches/${batchId}/rules`).then((res) => res.data);
+
+// NEW: update rules for a specific batch
+export const updateBatchRules = (batchId, payload) => {
+  // payload: { ruleIdsToAdd?: string[], ruleIdsToRemove?: string[] }
+  return axiosClient.patch(`/admin/batches/${batchId}/rules`, payload);
+};
+
 // ----- MainStock -----
 export const createMainStock = (data) => {
   return axiosClient.post("/admin/mainStock", data);
