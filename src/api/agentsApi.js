@@ -176,3 +176,12 @@ export const getProductStockMappings = () =>
   axiosClient.get("/inventory/product-stock-mappings");
 export const deleteProductStockMapping = (id) =>
   axiosClient.delete(`/inventory/product-stock-mappings/${id}`);
+
+export const bulkUpdateOrderItemsStatus = async (orderId, status) => {
+  if (!orderId || !status) throw new Error("Order ID and status are required");
+
+  const res = await axiosClient.post(`/orders/items/${orderId}/bulk-status`, {
+    status,
+  });
+  return res.data;
+};

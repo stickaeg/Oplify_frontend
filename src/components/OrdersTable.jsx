@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import {
+  useQuery,
+  keepPreviousData,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getOrders, getStores } from "../api/agentsApi";
+import {
+  getOrders,
+  getStores,
+  bulkUpdateOrderItemsStatus,
+} from "../api/agentsApi";
 import Table from "./Table";
 import Spinner from "./Loading";
 import getStatusClasses from "../utils/statusColors";
 import { useAuth } from "../context/AuthContext";
+import { getDeliveryStatusMeta } from "../utils/deliveryStatusHelpers";
 
 const OrdersTable = () => {
   const [page, setPage] = useState(1);
@@ -59,16 +69,28 @@ const OrdersTable = () => {
     staleTime: 1000 * 60 * 2,
   });
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ orderId, status }) =>
+      bulkUpdateOrderItemsStatus(orderId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
+  const handleBulkStatusChange = (orderId, status) => {
+    if (!status) return;
+    bulkStatusMutation.mutate({ orderId, status });
+  };
+
+  const handleRowClick = (orderId) => navigate(`/orders/${orderId}`);
+
   if (isLoading) return <Spinner />;
   if (isError) return <p>Failed to load orders</p>;
 
   const { data: orders, page: currentPage, pages } = data;
-
-  const { user } = useAuth();
-  console.log(user);
-
-  const handleRowClick = (orderId) => navigate(`/orders/${orderId}`);
-
   return (
     <div className="space-y-6 relative">
       <h2 className="text-xl font-bold">Orders</h2>
@@ -193,7 +215,10 @@ const OrdersTable = () => {
             <Table.HeaderCell>Store</Table.HeaderCell>
             <Table.HeaderCell>Total Price</Table.HeaderCell>
             <Table.HeaderCell>Status</Table.HeaderCell>
+            <Table.HeaderCell>Bosta Tracking No.</Table.HeaderCell>
+            <Table.HeaderCell>Delivery Status</Table.HeaderCell>
             <Table.HeaderCell>Created At</Table.HeaderCell>
+            <Table.HeaderCell>Actions</Table.HeaderCell>
           </Table.Head>
           <Table.Body>
             {orders.map((order) => (
@@ -213,9 +238,59 @@ const OrdersTable = () => {
                   >
                     {order.status || "-"}
                   </span>
-                </Table.Cell>{" "}
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="font-medium">
+                    {order.bostaTrackingNumber || "—"}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  {order.deliveryStatus
+                    ? (() => {
+                        const { label, className } = getDeliveryStatusMeta(
+                          order.deliveryStatus
+                        );
+                        return (
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${className}`}
+                          >
+                            {label}
+                          </span>
+                        );
+                      })()
+                    : "—"}
+                </Table.Cell>
                 <Table.Cell>
                   {new Date(order.createdAt).toLocaleString()}
+                </Table.Cell>
+
+                {/* Actions dropdown */}
+                <Table.Cell
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <select
+                    defaultValue=""
+                    disabled={bulkStatusMutation.isPending}
+                    onClick={(e) => {
+                      // prevent the click that opens the dropdown from bubbling to the row
+                      e.stopPropagation();
+                    }}
+                    onChange={(e) => {
+                      e.stopPropagation(); // extra safety
+                      const value = e.target.value;
+                      if (!value) return;
+                      handleBulkStatusChange(order.id, value);
+                      e.target.value = "";
+                    }}
+                    className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Set all items…</option>
+                    <option value="FULFILLED">Mark all Fulfilled</option>
+                    <option value="CANCELLED">Mark all Cancelled</option>
+                    <option value="RETURNED">Mark all Returned</option>
+                  </select>
                 </Table.Cell>
               </Table.Row>
             ))}

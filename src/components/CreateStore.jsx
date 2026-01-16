@@ -8,6 +8,7 @@ const CreateStore = ({ onClose }) => {
     name: "",
     accessToken: "",
     apiSecret: "",
+    bostaApiKey: "",
   });
   const queryClient = useQueryClient();
 
@@ -117,6 +118,24 @@ const CreateStore = ({ onClose }) => {
             className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             placeholder="Enter API secret"
             required
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="bostaApiKey"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Bosta API Key
+          </label>
+          <input
+            type="password"
+            id="bostaApiKey"
+            name="bostaApiKey"
+            value={formData.bostaApiKey}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+            placeholder="Enter Bosta API Key"
           />
         </div>
 
