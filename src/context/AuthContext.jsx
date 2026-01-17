@@ -36,7 +36,7 @@ export function getRoleBasedPath(role) {
     ADMIN: "/dashboard",
     DESIGNER: "/batches",
     PRINTER: "/batches",
-    CUTTER: "/batches",
+    CUTTER: "/scan/cutter",
     FULLFILLMENT: "/fulfillment",
     USER: "/orders",
   };

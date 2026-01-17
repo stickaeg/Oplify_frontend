@@ -36,9 +36,25 @@ export const getOrders = async ({
   return res.data;
 };
 
-export const getBatches = async ({ page = 1, limit = 20, ruleName = "" }) => {
+export const getBatches = async ({
+  page = 1,
+  limit = 20,
+  ruleName = "",
+  status = "",
+  startDate = "",
+  endDate = "",
+  search = "",
+}) => {
   const res = await axiosClient.get("/batches", {
-    params: { page, limit, ruleName },
+    params: {
+      page,
+      limit,
+      ruleName: ruleName || undefined,
+      status: status || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      search: search || undefined,
+    },
   });
   return res.data;
 };
@@ -67,7 +83,7 @@ export const itemStatusUpdate = async (orderItemId, status, unitIds = null) => {
 
   const res = await axiosClient.patch(
     `/orders/orderItems/${orderItemId}/status`,
-    payload
+    payload,
   );
   return res.data;
 };
@@ -129,6 +145,38 @@ export const downloadFile = async (fileId, fileName) => {
   }
 };
 
+export const downloadBatchFiles = async (batchId, batchName = null) => {
+  const controller = new AbortController(); // Cancel support
+  try {
+    const response = await axiosClient.get(`/google/downloadZip/${batchId}`, {
+      responseType: "blob",
+      signal: controller.signal,
+      timeout: process.env.NODE_ENV === "production" ? 120000 : 60000, // 2min prod, 1min dev
+    });
+
+    const zipName =
+      batchName?.replace(/[^a-z0-9]/gi, "_") + ".zip" || `batch-${batchId}.zip`;
+    const blob = new Blob([response.data], { type: "application/zip" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = zipName;
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    link.onclick = () => {
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    };
+  } catch (error) {
+    throw new Error("Download cancelled");
+  }
+};
+
 export const scanBatch = async (token) => {
   const res = await axiosClient.get(`/scan/batch/${token}`);
   return res.data;
@@ -184,4 +232,9 @@ export const bulkUpdateOrderItemsStatus = async (orderId, status) => {
     status,
   });
   return res.data;
+};
+
+export const listRules = async (filters = {}) => {
+  const response = await axiosClient.get("/batches/rules", { params: filters });
+  return response.data;
 };

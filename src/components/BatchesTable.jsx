@@ -4,16 +4,28 @@ import { useNavigate } from "react-router-dom";
 import Table from "./Table";
 import Spinner from "./Loading";
 import ExportExcel from "./ExportExcel";
-import { getBatchRules, listRules, updateBatchRules } from "../api/adminsApi";
-import { getBatches, updateBatchStatus } from "../api/agentsApi";
+import { getBatchRules, updateBatchRules } from "../api/adminsApi";
+import {
+  listRules,
+  downloadBatchFiles,
+  updateBatchStatus,
+} from "../api/agentsApi";
+import { getBatches } from "../api/agentsApi";
 import getStatusClasses from "../utils/statusColors";
+import { useAuth } from "../context/AuthContext";
 
 const BatchesTable = () => {
   const [page, setPage] = useState(1);
   const [selectedRule, setSelectedRule] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [search, setSearch] = useState("");
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [localRules, setLocalRules] = useState([]);
   const [maxCapacityInput, setMaxCapacityInput] = useState("");
+  const [updatingBatchId, setUpdatingBatchId] = useState(null); // 🆕 Track which batch is updating
+  const { user } = useAuth();
 
   const limit = 10;
   const queryClient = useQueryClient();
@@ -27,16 +39,27 @@ const BatchesTable = () => {
     queryFn: () => listRules(filters),
   });
 
-  const rules = rulesResp || []; // body from Axios response
+  const rules = rulesResp || [];
 
-  // -------- Batches list --------
+  // 🆕 Build filters object for batches API
+  const batchFilters = {
+    page,
+    limit,
+    ruleName: selectedRule || undefined,
+    status: selectedStatus || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    search: search || undefined,
+  };
+
+  // -------- Batches list (now with ALL filters!) --------
   const {
     data: batchesResp,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["batches", page, limit, selectedRule],
-    queryFn: () => getBatches({ page, limit, ruleName: selectedRule }),
+    queryKey: ["batches", batchFilters],
+    queryFn: () => getBatches(batchFilters),
     keepPreviousData: true,
   });
 
@@ -48,6 +71,13 @@ const BatchesTable = () => {
   });
 
   const batchRules = batchRulesResp || null;
+
+  // 🆕 Auto-filter DESIGNED for PRINTER role
+  useEffect(() => {
+    if (user.role === "PRINTER") {
+      setSelectedStatus("DESIGNED");
+    }
+  }, [user.role]);
 
   useEffect(() => {
     if (!editingBatchId) return;
@@ -90,10 +120,54 @@ const BatchesTable = () => {
     onError: (err) => {
       console.error("Failed to update batch rules:", err);
       alert(
-        `Error updating rules: ${err.response?.data?.error || err.message}`
+        `Error updating rules: ${err.response?.data?.error || err.message}`,
       );
     },
   });
+
+  // 🆕 Status update mutation
+  const { mutate: updateStatusMutation, isPending: updatingStatus } =
+    useMutation({
+      mutationFn: (batchId) => updateBatchStatus(batchId, "PRINTING"),
+      onMutate: async (batchId) => {
+        setUpdatingBatchId(batchId);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(["batches"]);
+        console.log("Batch status updated to PRINTING");
+      },
+      onError: (err) => {
+        console.error("Failed to update batch status:", err);
+        alert(
+          `Status update failed: ${err.response?.data?.error || err.message}`,
+        );
+      },
+      onSettled: () => {
+        setUpdatingBatchId(null);
+      },
+    });
+
+  // 🆕 Enhanced Batch download handler
+  const handleDownloadBatch = async (batchId, batchName) => {
+    try {
+      // 🆕 PRINTER: Update status to PRINTING before download
+      if (user.role === "PRINTER") {
+        await updateStatusMutation(batchId);
+      }
+
+      // Download files (status already updated for PRINTER)
+      await downloadBatchFiles(batchId, batchName);
+      console.log(`Downloaded batch ${batchName}`);
+    } catch (error) {
+      console.error("Batch download failed:", error);
+      // Don't revert status on download failure - let admin handle it
+    }
+  };
+
+  // 🆕 Reset page to 1 when filters change
+  const handleFilterChange = () => {
+    setPage(1);
+  };
 
   if (isLoading || rulesLoading) return <Spinner />;
   if (isError || !batchesResp) return <p>Failed to load batches</p>;
@@ -114,7 +188,7 @@ const BatchesTable = () => {
 
   const toggleRule = (id) => {
     setLocalRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r))
+      prev.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)),
     );
   };
 
@@ -122,17 +196,17 @@ const BatchesTable = () => {
     if (!editingBatchId || localRules.length === 0) return;
 
     const selectedNow = new Set(
-      localRules.filter((r) => r.selected).map((r) => r.id)
+      localRules.filter((r) => r.selected).map((r) => r.id),
     );
     const selectedFromDb = new Set(
-      localRules.filter((r) => r.selectedFromDb).map((r) => r.id)
+      localRules.filter((r) => r.selectedFromDb).map((r) => r.id),
     );
 
     const ruleIdsToAdd = [...selectedNow].filter(
-      (id) => !selectedFromDb.has(id)
+      (id) => !selectedFromDb.has(id),
     );
     const ruleIdsToRemove = [...selectedFromDb].filter(
-      (id) => !selectedNow.has(id)
+      (id) => !selectedNow.has(id),
     );
 
     const maxCapacityNum = maxCapacityInput
@@ -159,14 +233,6 @@ const BatchesTable = () => {
       closeEditRules();
       return;
     }
-
-    console.log("Saving rules + maxCapacity:", {
-      batchId: editingBatchId,
-      ruleIdsToAdd,
-      ruleIdsToRemove,
-      maxCapacity: maxCapacityNum,
-    });
-
     saveBatchRules({
       batchId: editingBatchId,
       ruleIdsToAdd,
@@ -177,30 +243,102 @@ const BatchesTable = () => {
 
   return (
     <div className="space-y-4 relative">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Batches</h2>
+      {/* 🆕 FILTERS SECTION */}
+      <div className="bg-white p-6 border border-gray-200 rounded-lg shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Rule Name
+            </label>
+            <select
+              value={selectedRule}
+              onChange={(e) => {
+                setSelectedRule(e.target.value);
+                handleFilterChange();
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Rules</option>
+              {rules.map((rule) => (
+                <option key={rule.id} value={rule.name}>
+                  {rule.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Filter by Rule
-          </label>
-          <select
-            value={selectedRule}
-            onChange={(e) => {
-              setSelectedRule(e.target.value);
-              setPage(1);
-            }}
-            disabled={rulesLoading}
-            className="border border-gray-300 rounded-lg px-3 py-2 w-48 text-gray-700 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
-            <option value="">All Rules</option>
-            {rules.map((rule) => (
-              <option key={rule.id} value={rule.name}>
-                {rule.name}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                handleFilterChange();
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="DESIGNED">Designed</option>
+              <option value="PRINTING">Printing</option>
+              <option value="BATCHED">Batched</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                handleFilterChange();
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                handleFilterChange();
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Search (Name or Rule)
+          </label>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              handleFilterChange();
+            }}
+            placeholder="Search batches..."
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">
+          Batches {user.role === "PRINTER" && "(DESIGNED only)"}
+        </h2>
       </div>
 
       <Table>
@@ -213,80 +351,106 @@ const BatchesTable = () => {
         </Table.Head>
 
         <Table.Body>
-          {batches.map((batch) => (
-            <Table.Row
-              key={batch.id}
-              className="cursor-pointer hover:bg-gray-50 transition"
-              onClick={(e) => {
-                const target = e.target;
+          {batches.map((batch) => {
+            const fileCount = batch.fileCount || 0;
+            const showDownload = fileCount > 0;
+            const isUpdatingThisBatch = updatingBatchId === batch.id;
 
-                // Ignore clicks from actions cell or any button
-                if (
-                  target.closest(".batch-actions-cell") ||
-                  target.closest("button")
-                ) {
-                  return;
-                }
-
-                navigate(`/batches/${batch.id}`);
-              }}
-            >
-              <Table.Cell className="cursor-pointer">{batch.name}</Table.Cell>
-
-              <Table.Cell>
-                <div className="flex items-center gap-2">
-                  <div className="w-32 h-4 bg-gray-200 rounded overflow-hidden">
-                    <div
-                      className={`h-full ${
-                        batch.capacity / batch.maxCapacity > 0.8
-                          ? "bg-red-500"
-                          : "bg-green-500"
-                      }`}
-                      style={{
-                        width: `${(batch.capacity / batch.maxCapacity) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {batch.capacity} / {batch.maxCapacity}
-                  </span>
-                </div>
-              </Table.Cell>
-
-              <Table.Cell>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
-                    batch.status
-                  )}`}
-                >
-                  {batch.status.replaceAll("_", " ")}
-                </span>
-              </Table.Cell>
-
-              <Table.Cell>
-                {new Date(batch.createdAt).toLocaleString()}
-              </Table.Cell>
-
-              <Table.Cell
-                className="batch-actions-cell"
-                onClick={(e) => e.stopPropagation()}
+            return (
+              <Table.Row
+                key={batch.id}
+                className="cursor-pointer hover:bg-gray-50 transition"
+                onClick={(e) => {
+                  const target = e.target;
+                  if (
+                    target.closest(".batch-actions-cell") ||
+                    target.closest("button")
+                  ) {
+                    return;
+                  }
+                  navigate(`/batches/${batch.id}`);
+                }}
               >
-                <div className="flex items-center gap-2">
-                  <button
-                    className="px-3 py-1 text-xs rounded border border-gray-300 hover:bg-gray-50"
-                    onClick={() => openEditRules(batch.id)}
-                  >
-                    Edit rules
-                  </button>
+                <Table.Cell className="cursor-pointer">{batch.name}</Table.Cell>
 
-                  <ExportExcel
-                    batch={batch}
-                    disabled={batch.capacity < batch.maxCapacity}
-                  />
-                </div>
-              </Table.Cell>
-            </Table.Row>
-          ))}
+                <Table.Cell>
+                  <div className="flex items-center gap-2">
+                    <div className="w-32 h-4 bg-gray-200 rounded overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          batch.capacity / batch.maxCapacity > 0.8
+                            ? "bg-red-500"
+                            : "bg-green-500"
+                        }`}
+                        style={{
+                          width: `${(batch.capacity / batch.maxCapacity) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {batch.capacity} / {batch.maxCapacity}
+                    </span>
+                  </div>
+                </Table.Cell>
+
+                <Table.Cell>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
+                      batch.status,
+                    )}`}
+                  >
+                    {batch.status.replaceAll("_", " ")}
+                  </span>
+                </Table.Cell>
+
+                <Table.Cell>
+                  {new Date(batch.createdAt).toLocaleString()}
+                </Table.Cell>
+
+                <Table.Cell
+                  className="batch-actions-cell"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {user.role === "ADMIN" && (
+                      <button
+                        className="px-3 py-1 text-xs rounded border border-gray-300 hover:bg-gray-50"
+                        onClick={() => openEditRules(batch.id)}
+                      >
+                        Edit rules
+                      </button>
+                    )}
+
+                    {user.role === "DESIGNER" && (
+                      <ExportExcel
+                        batch={batch}
+                        disabled={batch.capacity < batch.maxCapacity}
+                      />
+                    )}
+
+                    {showDownload && (
+                      <button
+                        className="px-6 py-1 text-md bg-green-600 hover:bg-green-700 text-white rounded font-medium flex items-center gap-1 shadow-sm transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() =>
+                          handleDownloadBatch(batch.id, batch.name)
+                        }
+                        disabled={isUpdatingThisBatch}
+                        title={`Download ${fileCount} files as ZIP${user.role === "PRINTER" ? " (will set to PRINTING)" : ""}`}
+                      >
+                        {isUpdatingThisBatch ? (
+                          <>
+                            <Spinner size="sm" /> Updating...
+                          </>
+                        ) : (
+                          "Download All"
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </Table.Cell>
+              </Table.Row>
+            );
+          })}
         </Table.Body>
       </Table>
 
@@ -313,74 +477,78 @@ const BatchesTable = () => {
 
       {/* Modal for editing rules */}
       {editingBatchId && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 space-y-4">
-            <h3 className="text-lg font-semibold">
-              Edit rules for {batchRules?.batch?.name || "Batch"}
-            </h3>
-            
-            {batchRulesLoading ? (
-              <Spinner />
-            ) : (
-              <>
-                <div className="space-y-3 mb-3">
-                  <p className="text-sm text-gray-600">
-                    Edit the max capacity and select the rules that should apply
-                    to this batch.
-                  </p>
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-semibold">
+                Edit rules for {batchRules?.batch?.name || "Batch"}
+              </h3>
+            </div>
 
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">
-                      Max capacity
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm w-28"
-                      value={maxCapacityInput}
-                      onChange={(e) => setMaxCapacityInput(e.target.value)}
-                    />
-                  </div>
-                </div>
+            <div className="p-6 space-y-4 overflow-y-auto max-h-96">
+              {batchRulesLoading ? (
+                <Spinner />
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600">
+                      Edit the max capacity and select the rules that should
+                      apply to this batch.
+                    </p>
 
-                <div className="max-h-64 overflow-y-auto border rounded p-3 space-y-2">
-                  {localRules.map((rule) => (
-                    <label
-                      key={rule.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-gray-700">
+                        Max capacity
+                      </label>
                       <input
-                        type="checkbox"
-                        className="h-4 w-4"
-                        checked={rule.selected}
-                        onChange={() => toggleRule(rule.id)}
+                        type="number"
+                        min={1}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm w-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={maxCapacityInput}
+                        onChange={(e) => setMaxCapacityInput(e.target.value)}
                       />
-                      <span>
-                        {rule.name}
-                        {rule.variantTitle ? ` – ${rule.variantTitle}` : ""}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                    </div>
+                  </div>
 
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50"
-                    onClick={closeEditRules}
-                    disabled={savingRules}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                    disabled={savingRules}
-                    onClick={handleSaveRules}
-                  >
-                    {savingRules ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </>
-            )}
+                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                    {localRules.map((rule) => (
+                      <label
+                        key={rule.id}
+                        className="flex items-center gap-2 text-sm p-2 hover:bg-gray-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded focus:ring-2 focus:ring-blue-500"
+                          checked={rule.selected}
+                          onChange={() => toggleRule(rule.id)}
+                        />
+                        <span>
+                          {rule.name}
+                          {rule.variantTitle ? ` – ${rule.variantTitle}` : ""}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="border-t p-4 flex justify-end gap-2 bg-gray-50">
+              <button
+                className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50 transition-colors"
+                onClick={closeEditRules}
+                disabled={savingRules}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={savingRules}
+                onClick={handleSaveRules}
+              >
+                {savingRules ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
         </div>
       )}

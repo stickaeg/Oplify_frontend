@@ -30,12 +30,9 @@ const menuByRole = {
   ],
   printer: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
+    { name: "Scanner", path: "/scan/printer", icon: <FiCommand /> },
   ],
-  cutter: [
-    { name: "Batches", path: "/batches", icon: <FiLayers /> },
-    { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },
-  ],
+  cutter: [{ name: "Scanner", path: "/scan/cutter", icon: <FiCommand /> }],
   fullfillment: [
     { name: "Batches", path: "/batches", icon: <FiLayers /> },
     { name: "Orders", path: "/orders", icon: <FiShoppingBag /> },

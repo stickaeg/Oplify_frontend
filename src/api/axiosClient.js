@@ -9,14 +9,23 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Skip 401 for blob downloads (they're stateless)
+    if (res.config.responseType === "blob" || res.status === 200) {
+      return res;
+    }
+    return res;
+  },
   (err) => {
+    // Don't auto-redirect on download errors
+    if (err.config?.responseType === "blob" || err.code === "ERR_NETWORK") {
+      return Promise.reject(err);
+    }
     if (err.response?.status === 401) {
-      // Session expired or not logged in
       // window.location.href = "/";
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 export default axiosClient;
