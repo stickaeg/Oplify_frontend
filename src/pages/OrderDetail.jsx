@@ -1,6 +1,11 @@
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getOrderById, itemStatusUpdate, replacement } from "../api/agentsApi";
+import {
+  getOrderById,
+  itemStatusUpdate,
+  replacement,
+  bulkUpdateOrderItemsStatus,
+} from "../api/agentsApi";
 import getStatusClasses from "../utils/statusColors";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
@@ -28,6 +33,7 @@ const OrderDetail = () => {
   });
 
   console.log("Order Data:", order);
+
   // ✅ Mutation to update item status
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderItemId, status, unitIds }) =>
@@ -37,10 +43,30 @@ const OrderDetail = () => {
       setSelectedUnits({});
     },
     onError: (error) => {
-      console.error("❌ Frontend error:", error.response?.data); // 👈 BETTER ERROR
+      console.error("❌ Frontend error:", error.response?.data);
       alert("Failed to update status");
     },
   });
+
+  // ✅ NEW: Bulk status mutation for all items in order
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ orderId, status }) =>
+      bulkUpdateOrderItemsStatus(orderId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order", id] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error) => {
+      console.error("❌ Bulk status update failed:", error.response?.data);
+      alert("Failed to update all items status");
+    },
+  });
+
+  // ✅ NEW: Handle bulk status change for entire order
+  const handleBulkStatusChange = (orderId, status) => {
+    if (!status) return;
+    bulkStatusMutation.mutate({ orderId, status });
+  };
 
   // ✅ Mutation for replacement (redesign/reprint)
   const replacementMutation = useMutation({
@@ -48,7 +74,7 @@ const OrderDetail = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["order", id] });
       alert(
-        `✅ Replacement created: ${data.reason}\nNew Unit ID: ${data.newUnitId}\nNew Batch: ${data.newBatch.name}`
+        `✅ Replacement created: ${data.reason}\nNew Unit ID: ${data.newUnitId}\nNew Batch: ${data.newBatch.name}`,
       );
     },
     onError: (error) => {
@@ -69,7 +95,7 @@ const OrderDetail = () => {
   const handleReplacement = (unitId, reason) => {
     if (
       !confirm(
-        `Create a replacement unit for ${reason}?\n\nThe current unit will be marked as CANCELLED and a new unit will be created in a new batch.`
+        `Create a replacement unit for ${reason}?\n\nThe current unit will be marked as CANCELLED and a new unit will be created in a new batch.`,
       )
     ) {
       return;
@@ -140,7 +166,7 @@ const OrderDetail = () => {
 
   const canEditStatus = user?.role === "ADMIN" || user?.role === "FULLFILLMENT";
   const canReplace = ["ADMIN", "DESIGNER", "PRINTER", "FULLFILLMENT"].includes(
-    user?.role
+    user?.role,
   );
 
   return (
@@ -154,7 +180,7 @@ const OrderDetail = () => {
           </h1>
           <span
             className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
-              order.status
+              order.status,
             )}`}
           >
             {order.status?.replaceAll("_", " ") || "-"}
@@ -242,6 +268,48 @@ const OrderDetail = () => {
             <p className="text-gray-900">{order.province || "—"}</p>
           </div>
         </div>
+
+        {/* ✅ NEW: Bulk Status Control for Entire Order */}
+        {canEditStatus && (
+          <div className="border-t border-gray-200 bg-blue-50 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">
+                Set ALL items status:
+              </span>
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <select
+                  defaultValue=""
+                  disabled={bulkStatusMutation.isPending}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const value = e.target.value;
+                    if (!value) return;
+                    handleBulkStatusChange(order.id, value);
+                    e.target.value = "";
+                  }}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-800 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Set all items…</option>
+                  <option value="FULFILLED">Mark all Fulfilled</option>
+                  <option value="CANCELLED">Mark all Cancelled</option>
+                  <option value="RETURNED">Mark all Returned</option>
+                </select>
+              </div>
+              {bulkStatusMutation.isPending && (
+                <span className="text-sm text-blue-600 animate-pulse">
+                  Updating...
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== ITEMS ===== */}
@@ -255,10 +323,10 @@ const OrderDetail = () => {
 
             // ✅ Calculate status breakdown (exclude cancelled from display)
             const activeUnits = allUnits.filter(
-              (u) => u.status !== "CANCELLED"
+              (u) => u.status !== "CANCELLED",
             );
             const cancelledUnits = allUnits.filter(
-              (u) => u.status === "CANCELLED"
+              (u) => u.status === "CANCELLED",
             );
 
             const statusBreakdown = activeUnits.reduce((acc, unit) => {
@@ -271,6 +339,7 @@ const OrderDetail = () => {
                 key={item.id}
                 className="border border-gray-200 rounded-lg p-4 shadow-sm"
               >
+                {/* Rest of your item rendering code remains exactly the same */}
                 <div className="flex items-center gap-4 relative">
                   {/* ✅ Image container with hover preview positioned next to it */}
                   <div className="relative">
@@ -345,14 +414,14 @@ const OrderDetail = () => {
                             <span key={status} className="mr-3">
                               <span
                                 className={`font-semibold ${getStatusClasses(
-                                  status
+                                  status,
                                 )}`}
                               >
                                 <span className="p-1 rounded">{count}</span>
                               </span>{" "}
                               {status.replaceAll("_", " ")}
                             </span>
-                          )
+                          ),
                         )}
                         {cancelledUnits.length > 0 && (
                           <span className="text-red-500 font-semibold">
@@ -367,7 +436,7 @@ const OrderDetail = () => {
                     <p className="font-semibold">Qty: {item.quantity}</p>
                     <p>EGP {item.price?.toFixed(2)}</p>
 
-                    {/* ✅ Bulk status dropdown (updates all units) */}
+                    {/* ✅ Item-level status dropdown */}
                     {canEditStatus ? (
                       <select
                         value={item.status}
@@ -390,7 +459,7 @@ const OrderDetail = () => {
                     ) : (
                       <span
                         className={`px-3 py-1 rounded-md text-xs font-medium uppercase ${getStatusClasses(
-                          item.status
+                          item.status,
                         )}`}
                       >
                         {item.status?.replaceAll("_", " ")}
@@ -425,7 +494,7 @@ const OrderDetail = () => {
                           onClick={() =>
                             toggleAllUnits(
                               item.id,
-                              activeUnits.map((u) => u.id)
+                              activeUnits.map((u) => u.id),
                             )
                           }
                           className="text-xs text-gray-600 hover:text-gray-800"
@@ -465,7 +534,7 @@ const OrderDetail = () => {
                                 </span>
                                 <span
                                   className={`text-xs px-2 py-1 rounded ${getStatusClasses(
-                                    unit.status
+                                    unit.status,
                                   )}`}
                                 >
                                   {unit.status.replaceAll("_", " ")}
@@ -512,7 +581,7 @@ const OrderDetail = () => {
                                   handleStatusChange(
                                     item.id,
                                     e.target.value,
-                                    selectedItemUnits
+                                    selectedItemUnits,
                                   );
                                 }
                               }}
@@ -543,7 +612,7 @@ const OrderDetail = () => {
                     <div className="space-y-2">
                       {item.BatchItem.map((b) => {
                         const activeBatchUnits = b.units.filter(
-                          (u) => u.status !== "CANCELLED"
+                          (u) => u.status !== "CANCELLED",
                         ).length;
                         return (
                           <div
@@ -560,7 +629,7 @@ const OrderDetail = () => {
                             </div>
                             <span
                               className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
-                                b.status
+                                b.status,
                               )}`}
                             >
                               {b.status.replaceAll("_", " ")}

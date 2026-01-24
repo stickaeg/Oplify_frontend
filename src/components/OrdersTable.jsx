@@ -233,7 +233,7 @@ const OrdersTable = () => {
                 <Table.Cell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusClasses(
-                      order.status
+                      order.status,
                     )}`}
                   >
                     {order.status || "-"}
@@ -248,7 +248,7 @@ const OrdersTable = () => {
                   {order.deliveryStatus
                     ? (() => {
                         const { label, className } = getDeliveryStatusMeta(
-                          order.deliveryStatus
+                          order.deliveryStatus,
                         );
                         return (
                           <span

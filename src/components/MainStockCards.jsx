@@ -17,7 +17,6 @@ const MainStockCards = ({ filters }) => {
   if (!data || data.length === 0) return <div>No main stock available</div>;
 
   const totalMainStocks = data.length;
-  const totalQuantity = data.reduce((sum, stock) => sum + stock.quantity, 0);
 
   const handleOpenMainStock = (id) => setSelectedMainStockId(id);
 
@@ -26,10 +25,6 @@ const MainStockCards = ({ filters }) => {
       {/* Summary Card */}
       <div className="p-4 bg-white rounded-lg shadow-md w-60 text-center">
         <h2 className="font-semibold text-lg">Stock Totals</h2>
-        <p className="text-gray-700">
-          Total Quantity:{" "}
-          <span className="font-bold text-green-600">{totalQuantity}</span>
-        </p>
         <p className="text-gray-700">
           Stock items:{" "}
           <span className="font-bold text-green-600">{totalMainStocks}</span>

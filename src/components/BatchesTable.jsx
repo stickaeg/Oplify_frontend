@@ -17,14 +17,14 @@ import { useAuth } from "../context/AuthContext";
 const BatchesTable = () => {
   const [page, setPage] = useState(1);
   const [selectedRule, setSelectedRule] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState([]); // 🆕 Array instead of string
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [localRules, setLocalRules] = useState([]);
   const [maxCapacityInput, setMaxCapacityInput] = useState("");
-  const [updatingBatchId, setUpdatingBatchId] = useState(null); // 🆕 Track which batch is updating
+  const [updatingBatchId, setUpdatingBatchId] = useState(null);
   const { user } = useAuth();
 
   const limit = 10;
@@ -41,12 +41,25 @@ const BatchesTable = () => {
 
   const rules = rulesResp || [];
 
+  // 🆕 Status options
+  const statusOptions = [
+    { value: "PENDING", label: "Pending" },
+    { value: "WAITING_BATCH ", label: "Waiting Batch" },
+    { value: "DESIGNED", label: "Designed" },
+    { value: "DESIGNING", label: "Designing" },
+    { value: "PRINTING", label: "Printing" },
+    { value: "BATCHED", label: "Batched" },
+    { value: "COMPLETED", label: "Completed" },
+    { value: "PRINTED", label: "Printed" },
+  ];
+
   // 🆕 Build filters object for batches API
   const batchFilters = {
     page,
     limit,
     ruleName: selectedRule || undefined,
-    status: selectedStatus || undefined,
+    status:
+      selectedStatuses.length > 0 ? selectedStatuses.join(",") : undefined, // 🆕 Comma-separated
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     search: search || undefined,
@@ -72,10 +85,24 @@ const BatchesTable = () => {
 
   const batchRules = batchRulesResp || null;
 
+  // 🆕 Toggle status chip
+  const toggleStatus = (statusValue) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(statusValue)
+        ? prev.filter((s) => s !== statusValue)
+        : [...prev, statusValue],
+    );
+  };
+
+  // 🆕 Clear all statuses
+  const clearStatuses = () => {
+    setSelectedStatuses([]);
+  };
+
   // 🆕 Auto-filter DESIGNED for PRINTER role
   useEffect(() => {
     if (user.role === "PRINTER") {
-      setSelectedStatus("DESIGNED");
+      setSelectedStatuses(["DESIGNED"]);
     }
   }, [user.role]);
 
@@ -245,7 +272,7 @@ const BatchesTable = () => {
     <div className="space-y-4 relative">
       {/* 🆕 FILTERS SECTION */}
       <div className="bg-white p-6 border border-gray-200 rounded-lg shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Rule Name
@@ -267,24 +294,38 @@ const BatchesTable = () => {
             </select>
           </div>
 
+          {/* 🆕 Multi-select Status Chips */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Status
+              {selectedStatuses.length > 0 && ` (${selectedStatuses.length})`}
             </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                handleFilterChange();
-              }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="DESIGNED">Designed</option>
-              <option value="PRINTING">Printing</option>
-              <option value="BATCHED">Batched</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {statusOptions.map((statusOption) => {
+                const isActive = selectedStatuses.includes(statusOption.value);
+                return (
+                  <button
+                    key={statusOption.value}
+                    onClick={() => toggleStatus(statusOption.value)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border-2 transition-all ${
+                      isActive
+                        ? "border-blue-500 bg-blue-100 text-blue-800 shadow-md"
+                        : "border-gray-200 hover:border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {statusOption.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedStatuses.length > 0 && (
+              <button
+                onClick={clearStatuses}
+                className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear all ({selectedStatuses.length})
+              </button>
+            )}
           </div>
 
           <div>
@@ -318,7 +359,7 @@ const BatchesTable = () => {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search (Name or Rule)
           </label>
@@ -335,6 +376,7 @@ const BatchesTable = () => {
         </div>
       </div>
 
+      {/* Rest of component remains exactly the same */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">
           Batches {user.role === "PRINTER" && "(DESIGNED only)"}
@@ -475,7 +517,7 @@ const BatchesTable = () => {
         </button>
       </div>
 
-      {/* Modal for editing rules */}
+      {/* Modal for editing rules - unchanged */}
       {editingBatchId && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
